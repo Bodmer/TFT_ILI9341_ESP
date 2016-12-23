@@ -16,6 +16,7 @@
 // Display SDI/MOSI to NodeMCU pin D7
 // Display DC       to NodeMCU pin D3
 // Display RESET    to NodeMCU pin D4
+// Display CS       to NodeMCU pin D8
 // Display GND      to NodeMCU pin GND (0V)
 // Display VCC      to NodeMCU pin VIN (5V)
 
