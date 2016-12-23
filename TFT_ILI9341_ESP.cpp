@@ -1372,7 +1372,7 @@ void TFT_ILI9341_ESP::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t co
   setAddrWindow(x, y, x, y + h - 1);
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
-  while(h>32) { _SPI->writePattern(&colorBin[0], 2, 32); h-=32;}
+  //while(h>32) { _SPI->writePattern(&colorBin[0], 2, 32); h-=32;}
   _SPI->writePattern(&colorBin[0], 2, h);
 
   *csport |= cspinmask;
@@ -1395,7 +1395,7 @@ void TFT_ILI9341_ESP::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t co
   setAddrWindow(x, y, x + w - 1, y);
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
-  while(w>32) { _SPI->writePattern(&colorBin[0], 2, 32); w-=32;}
+  //while(w>32) { _SPI->writePattern(&colorBin[0], 2, 32); w-=32;}
   _SPI->writePattern(&colorBin[0], 2, w);
 
   *csport |= cspinmask;
@@ -1419,7 +1419,7 @@ void TFT_ILI9341_ESP::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint1
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
   uint32_t n = (uint32_t)w * (uint32_t)h;
-  while(n>32) { _SPI->writePattern(&colorBin[0], 2, 32); n-=32;}
+  //while(n>32) { _SPI->writePattern(&colorBin[0], 2, 32); n-=32;}
   _SPI->writePattern(&colorBin[0], 2, n);
 
   *csport |= cspinmask;
