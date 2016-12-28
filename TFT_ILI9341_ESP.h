@@ -1,6 +1,6 @@
 /***************************************************
-  Arduino TFT graphics library targetted at ESP8266
-  based boards such as the NodeMCU.
+  Arduino TFT graphics library targetted at the UNO
+  and Mega boards.
 
   This library has been derived from the Adafruit_GFX
   library and the associated driver library. See text
