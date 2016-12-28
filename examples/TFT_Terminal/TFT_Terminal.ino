@@ -16,7 +16,7 @@
   display. Modification of this sketch may lead to problems
   unless the ILI9341 data sheet has been understood!
 
-  Updated by Bodmer 21/7/16 for TFT_ILI9341_ESP library:
+  Updated by Bodmer 21/12/16 for TFT_ILI9341_ESP library:
   https://github.com/Bodmer/TFT_ILI9341_ESP
   
   BSD license applies, all text above must be included in any

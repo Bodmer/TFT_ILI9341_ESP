@@ -16,7 +16,6 @@
 // Display SDI/MOSI to NodeMCU pin D7
 // Display DC       to NodeMCU pin D3
 // Display RESET    to NodeMCU pin D4
-// Display CS       to NodeMCU pin D8
 // Display GND      to NodeMCU pin GND (0V)
 // Display VCC      to NodeMCU pin VIN (5V)
 
@@ -52,10 +51,9 @@
 
 // Define the SPI clock frequency (40MHz works OK) 80MHz sometimes fails
 
-// #define SPI_FREQUENCY 20000000
- #define SPI_FREQUENCY 40000000
-// #define SPI_FREQUENCY 80000000
-
+// #define SPI_FREQUENCY  20000000
+ #define SPI_FREQUENCY  40000000
+// #define SPI_FREQUENCY  80000000
 
 // Comment out the following #define if "SPI Transactions" do not need to be
 // supported. Tranaction support is required if other SPI devices are connected.

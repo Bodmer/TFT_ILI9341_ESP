@@ -17,7 +17,7 @@
  use width x height x 2 bytes of FLASH, i.e. 32 x 32 icon uses ~2048 bytes
 
  Performance is good enough for most applications:
- A 32 x 32 icon can be drawn by a humble UNO in ~3.6 milliseconds, i.e. ~280 icons per second!
+ A 32 x 32 icon can be drawn by a humble ESP8266 in ~3.6 milliseconds, i.e. ~280 icons per second!
  A 320 x 240 screen can be completely filled with icons in about 270ms
 
  Code derived from ILI9341_due example
