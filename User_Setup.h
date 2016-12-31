@@ -16,6 +16,7 @@
 // Display SDI/MOSI to NodeMCU pin D7
 // Display DC       to NodeMCU pin D3
 // Display RESET    to NodeMCU pin D4
+// Display CS       to NodeMCU pin D8
 // Display GND      to NodeMCU pin GND (0V)
 // Display VCC      to NodeMCU pin VIN (5V)
 
@@ -42,10 +43,21 @@
 #define LOAD_FONT6  // Font 6. Large 48 pixel font, needs ~2666 bytes in FLASH, only characters 1234567890:-.apm
 #define LOAD_FONT7  // Font 7. 7 segment 48 pixel font, needs ~2438 bytes in FLASH, only characters 1234567890:.
 #define LOAD_FONT8  // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
+#define LOAD_GFXFF  // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48
 
 // ##################################################################################
 //
-// Other speed up options
+// Define the character to be used to detemine the text bounding box for datum changes
+//
+// ##################################################################################
+
+#define FF_HEIGHT '/'  // '/' character used to set free font height above the baseline
+#define FF_BOTTOM 'y'  // 'y' character used to set free font height below baseline
+
+
+// ##################################################################################
+//
+// Other options
 //
 // ##################################################################################
 

@@ -67,6 +67,75 @@
 
 #define USE_FAST_PINIO
 
+// We can include all the free fonts and they will only be built into
+// the sketch if they are used
+
+#include <Fonts/GFXFF/gfxfont.h>
+
+#include <Fonts/GFXFF/TomThumb.h>  // TT1
+
+#include <Fonts/GFXFF/FreeMono9pt7b.h>  // FF1 or FM9
+#include <Fonts/GFXFF/FreeMono12pt7b.h> // FF2 or FM12
+#include <Fonts/GFXFF/FreeMono18pt7b.h> // FF3 or FM18
+#include <Fonts/GFXFF/FreeMono24pt7b.h> // FF4 or FM24
+
+#include <Fonts/GFXFF/FreeMonoOblique9pt7b.h>  // FF5 or FMO9
+#include <Fonts/GFXFF/FreeMonoOblique12pt7b.h> // FF6 or FMO12
+#include <Fonts/GFXFF/FreeMonoOblique18pt7b.h> // FF7 or FMO18
+#include <Fonts/GFXFF/FreeMonoOblique24pt7b.h> // FF8 or FMO24
+
+#include <Fonts/GFXFF/FreeMonoBold9pt7b.h>  // FF9  or FMB9
+#include <Fonts/GFXFF/FreeMonoBold12pt7b.h> // FF10 or FMB12
+#include <Fonts/GFXFF/FreeMonoBold18pt7b.h> // FF11 or FMB18
+#include <Fonts/GFXFF/FreeMonoBold24pt7b.h> // FF12 or FMB24
+
+#include <Fonts/GFXFF/FreeMonoBoldOblique9pt7b.h>  // FF13 or FMBO9
+#include <Fonts/GFXFF/FreeMonoBoldOblique12pt7b.h> // FF14 or FMBO12
+#include <Fonts/GFXFF/FreeMonoBoldOblique18pt7b.h> // FF15 or FMBO18
+#include <Fonts/GFXFF/FreeMonoBoldOblique24pt7b.h> // FF16 or FMBO24
+
+// Sans serif fonts
+#include <Fonts/GFXFF/FreeSans9pt7b.h>  // FF17 or FSS9
+#include <Fonts/GFXFF/FreeSans12pt7b.h> // FF18 or FSS12
+#include <Fonts/GFXFF/FreeSans18pt7b.h> // FF19 or FSS18
+#include <Fonts/GFXFF/FreeSans24pt7b.h> // FF20 or FSS24
+
+#include <Fonts/GFXFF/FreeSansOblique9pt7b.h>  // FF21 or FSSO9
+#include <Fonts/GFXFF/FreeSansOblique12pt7b.h> // FF22 or FSSO12
+#include <Fonts/GFXFF/FreeSansOblique18pt7b.h> // FF23 or FSSO18
+#include <Fonts/GFXFF/FreeSansOblique24pt7b.h> // FF24 or FSSO24
+
+#include <Fonts/GFXFF/FreeSansBold9pt7b.h>  // FF25 or FSSB9
+#include <Fonts/GFXFF/FreeSansBold12pt7b.h> // FF26 or FSSB12
+#include <Fonts/GFXFF/FreeSansBold18pt7b.h> // FF27 or FSSB18
+#include <Fonts/GFXFF/FreeSansBold24pt7b.h> // FF28 or FSSB24
+
+#include <Fonts/GFXFF/FreeSansBoldOblique9pt7b.h>  // FF29 or FSSBO9
+#include <Fonts/GFXFF/FreeSansBoldOblique12pt7b.h> // FF30 or FSSBO12
+#include <Fonts/GFXFF/FreeSansBoldOblique18pt7b.h> // FF31 or FSSBO18
+#include <Fonts/GFXFF/FreeSansBoldOblique24pt7b.h> // FF32 or FSSBO24
+
+// Serif fonts
+#include <Fonts/GFXFF/FreeSerif9pt7b.h>  // FF33 or FS9
+#include <Fonts/GFXFF/FreeSerif12pt7b.h> // FF34 or FS12
+#include <Fonts/GFXFF/FreeSerif18pt7b.h> // FF35 or FS18
+#include <Fonts/GFXFF/FreeSerif24pt7b.h> // FF36 or FS24
+
+#include <Fonts/GFXFF/FreeSerifItalic9pt7b.h>  // FF37 or FSI9
+#include <Fonts/GFXFF/FreeSerifItalic12pt7b.h> // FF38 or FSI12
+#include <Fonts/GFXFF/FreeSerifItalic18pt7b.h> // FF39 or FSI18
+#include <Fonts/GFXFF/FreeSerifItalic24pt7b.h> // FF40 or FSI24
+
+#include <Fonts/GFXFF/FreeSerifBold9pt7b.h>  // FF41 or FSB9
+#include <Fonts/GFXFF/FreeSerifBold12pt7b.h> // FF42 or FSB12
+#include <Fonts/GFXFF/FreeSerifBold18pt7b.h> // FF43 or FSB18
+#include <Fonts/GFXFF/FreeSerifBold24pt7b.h> // FF44 or FSB24
+
+#include <Fonts/GFXFF/FreeSerifBoldItalic9pt7b.h>  // FF45 or FSBI9
+#include <Fonts/GFXFF/FreeSerifBoldItalic12pt7b.h> // FF46 or FSBI12
+#include <Fonts/GFXFF/FreeSerifBoldItalic18pt7b.h> // FF47 or FSBI18
+#include <Fonts/GFXFF/FreeSerifBoldItalic24pt7b.h> // FF48 or FSBI24
+
 // Swap any type
 template <typename T> static inline void
 swap(T& a, T& b) { T t = a; a = b; b = t; }
@@ -84,6 +153,9 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 #define BL_DATUM 6 // Bottom left
 #define BC_DATUM 7 // Bottom centre
 #define BR_DATUM 8 // Bottom right
+#define L_BASELINE  9 // Left character baseline (Line the 'A' character would sit on)
+#define C_BASELINE 10 // Centre character baseline
+#define R_BASELINE 11 // Right character baseline
 
 
 // Change the width and height if required (defined in portrait mode)
@@ -199,54 +271,60 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 #define ILI9341_GREENYELLOW 0xAFE5      /* 173, 255,  47 */
 #define ILI9341_PINK        0xF81F
 
+// This is a structure to conveniently hold infomation on the default fonts
+// Stores pointer to font character image address table, width table and height
+
 typedef struct {
-	const unsigned char *chartbl;
-	const unsigned char *widthtbl;
-	unsigned       char height;
+	const uint8_t *chartbl;
+	const uint8_t *widthtbl;
+	uint8_t height;
+	uint8_t baseline;
 	} fontinfo;
 
-// This is a structure to conveniently hold infomation on the fonts
-// Stores font character image address pointer, width table and height
-
+// Now fill the structure
 const PROGMEM fontinfo fontdata [] = {
-   { 0, 0, 0 },
+   { 0, 0, 0, 0 },
 
-   { 0, 0, 8 },
+   // GLCD font (Font 1) does not have all parameters
+   { 0, 0, 8, 7 },
 
   #ifdef LOAD_FONT2
-   { (const unsigned char *)chrtbl_f16, widtbl_f16, chr_hgt_f16},
+   { (const uint8_t *)chrtbl_f16, widtbl_f16, chr_hgt_f16, baseline_f16},
   #else
-   { 0, 0, 0 },
+   { 0, 0, 0, 0 },
   #endif
 
-   { 0, 0, 0 },
+   // Font 3 current unused
+   { 0, 0, 0, 0 },
 
   #ifdef LOAD_FONT4
-   { (const unsigned char *)chrtbl_f32, widtbl_f32, chr_hgt_f32},
+   { (const uint8_t *)chrtbl_f32, widtbl_f32, chr_hgt_f32, baseline_f32},
   #else
-   { 0, 0, 0 },
+   { 0, 0, 0, 0 },
   #endif
 
-   { 0, 0, 0 },
+   // Font 5 current unused
+   { 0, 0, 0, 0 },
 
   #ifdef LOAD_FONT6
-   { (const unsigned char *)chrtbl_f64, widtbl_f64, chr_hgt_f64},
+   { (const uint8_t *)chrtbl_f64, widtbl_f64, chr_hgt_f64, baseline_f64},
   #else
-   { 0, 0, 0 },
+   { 0, 0, 0, 0 },
   #endif
 
   #ifdef LOAD_FONT7
-   { (const unsigned char *)chrtbl_f7s, widtbl_f7s, chr_hgt_f7s},
+   { (const uint8_t *)chrtbl_f7s, widtbl_f7s, chr_hgt_f7s, baseline_f7s},
   #else
-   { 0, 0, 0 },
+   { 0, 0, 0, 0 },
   #endif
 
   #ifdef LOAD_FONT8
-   { (const unsigned char *)chrtbl_f72, widtbl_f72, chr_hgt_f72}
+   { (const uint8_t *)chrtbl_f72, widtbl_f72, chr_hgt_f72, baseline_f72}
   #else
-   { 0, 0, 0 }
+   { 0, 0, 0, 0 }
   #endif
 };
+
 
 
 // Class functions and variables
@@ -259,8 +337,6 @@ class TFT_ILI9341_ESP : public Print {
   void     init(void), begin(void), // Same - begin included for backwards compatibility
 
            drawPixel(uint16_t x, uint16_t y, uint16_t color),
-           fastPixel(uint16_t x, uint16_t y, uint16_t color),
-           fastSetup(void),
 
            drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t font),
            setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1),
@@ -307,11 +383,18 @@ class TFT_ILI9341_ESP : public Print {
            setTextColor(uint16_t color),
            setTextColor(uint16_t fgcolor, uint16_t bgcolor),
            setTextSize(uint8_t size),
-           setTextFont(uint8_t font),
+
            setTextWrap(boolean wrap),
            setTextDatum(uint8_t datum),
            setTextPadding(uint16_t x_width),
 
+#ifdef LOAD_GFXFF
+           setFreeFont(const GFXfont *f = NULL),
+           setTextFont(uint8_t font),
+#else
+           setFreeFont(uint8_t font),
+           setTextFont(uint8_t font),
+#endif
            spiwrite(uint8_t),
            writecommand(uint8_t c),
            writedata(uint8_t d),
@@ -328,18 +411,18 @@ class TFT_ILI9341_ESP : public Print {
 
            drawString(const char *string, int poX, int poY, int font),
            drawCentreString(const char *string, int dX, int poY, int font),
-           drawRightString(const char *string, int dX, int poY, int font),
+           drawRightString(const char *string, int dX, int poY, int font);
 
-           height(void),
+  int16_t  height(void),
            width(void),
            textWidth(const char *string, int font),
-           fontHeight(int font);
+           fontHeight(int16_t font);
+
+    void   setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
 
  virtual   size_t write(uint8_t);
 
  private:
-
-    void  setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
 
   uint8_t  tabcolor;
            SPIClass *_SPI;
@@ -363,12 +446,19 @@ inline void spi_end() __attribute__((always_inline));
   uint16_t _width, _height, // Display w/h as modified by current rotation
            textcolor, textbgcolor, fontsloaded, addr_row, addr_col;
 
-  uint8_t  textfont,
-           textsize,
-           textdatum,
-           rotation;
+  uint8_t  glyph_ab,  // glyph height above baseline
+           glyph_bb,  // glyph height below baseline
+           textfont,  // Current selected font
+           textsize,  // Current font size multiplier
+           textdatum, // Text reference datum
+           rotation;  // Display rotation (0-3)
 
   boolean  textwrap; // If set, 'wrap' text at right edge of display
+
+#ifdef LOAD_GFXFF
+  GFXfont
+    *gfxFont;
+#endif
 
 };
 

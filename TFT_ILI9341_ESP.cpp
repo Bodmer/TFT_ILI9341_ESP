@@ -85,8 +85,6 @@ TFT_ILI9341_ESP::TFT_ILI9341_ESP(int16_t w, int16_t h)
 
   addr_row = 0xFFFF;
   addr_col = 0xFFFF;
-  win_xe = 0xFFFF;
-  win_ye = 0xFFFF;
 
 #ifdef LOAD_GLCD
   fontsloaded = 0x0002; // Bit 1 set
@@ -131,7 +129,7 @@ void TFT_ILI9341_ESP::writecommand(uint8_t c)
 {
   *dcport &= ~dcpinmask;
   *csport &= ~cspinmask;
-  spiwrite(c);
+  _SPI->transfer(c);
   *csport |= cspinmask;
   *dcport |= dcpinmask;
 }
@@ -143,7 +141,7 @@ void TFT_ILI9341_ESP::writecommand(uint8_t c)
 void TFT_ILI9341_ESP::writedata(uint8_t c)
 {
   *csport &= ~cspinmask;
-  spiwrite(c);
+  _SPI->transfer(c);
   *csport |= cspinmask;
 }
 
@@ -304,30 +302,71 @@ void TFT_ILI9341_ESP::init(void)
 ** Function name:           drawCircle
 ** Description:             Draw a circle outline
 ***************************************************************************************/
+/*
+// Midpoint circle algorithm, we can optimise this since y = 0 on first pass
+// and we can eliminate the multiply as well
+void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t radius, uint16_t color)
+{
+    int16_t x = radius;
+    int16_t y = 0;
+    int16_t err = 0;
+
+    while (x >= y)
+    {
+        drawPixel(x0 + x, y0 + y, color);
+        drawPixel(x0 + x, y0 - y, color);
+        drawPixel(x0 - x, y0 - y, color);
+        drawPixel(x0 - x, y0 + y, color);
+
+        drawPixel(x0 + y, y0 + x, color);
+        drawPixel(x0 + y, y0 - x, color);
+        drawPixel(x0 - y, y0 - x, color);
+        drawPixel(x0 - y, y0 + x, color);
+
+        if (err <= 0)
+        {
+            y += 1;
+            err += 2*y + 1;
+        }
+        if (err > 0)
+        {
+            x -= 1;
+            err -= 2*x + 1;
+        }
+    }
+}
+*/
+
+// Optimised midpoint circle algorithm
 void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
-  int16_t f = 1 - r;
-  int16_t ddF_x = 1;
-  int16_t ddF_y = - r - r;
-  int16_t x = 0;
+  int16_t  x  = 0;
+  int16_t  dx = 1;
+  int16_t  dy = r+r;
+  int16_t  p  = -(r>>1);
 
-  //fastSetup();
+  // These are ordered to minimise coordinate changes in x or y
+  // drawPixel can then send fewer bounding box commands
+  drawPixel(x0 + r, y0, color);
+  drawPixel(x0 - r, y0, color);
+  drawPixel(x0, y0 - r, color);
+  drawPixel(x0, y0 + r, color);
 
-  drawPixel(x0 + r, y0  , color);
-  drawPixel(x0 - r, y0  , color);
-  drawPixel(x0  , y0 - r, color);
-  drawPixel(x0  , y0 + r, color);
+  while(x<r){
 
-  while (x < r) {
-    if (f >= 0) {
+    if(p>=0) {
+      dy-=2;
+      p-=dy;
       r--;
-      ddF_y += 2;
-      f += ddF_y;
     }
-    x++;
-    ddF_x += 2;
-    f += ddF_x;
 
+    dx+=2;
+    p+=dx;
+
+    x++;
+
+    // These are ordered to minimise coordinate changes in x or y
+    // drawPixel can then send fewer bounding box commands
     drawPixel(x0 + x, y0 + r, color);
     drawPixel(x0 - x, y0 + r, color);
     drawPixel(x0 - x, y0 - r, color);
@@ -337,7 +376,7 @@ void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t col
     drawPixel(x0 - r, y0 + x, color);
     drawPixel(x0 - r, y0 - x, color);
     drawPixel(x0 + r, y0 - x, color);
-  }
+    }
 }
 
 /***************************************************************************************
@@ -584,6 +623,7 @@ void TFT_ILI9341_ESP::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y
 ** Function name:           fillTriangle 
 ** Description:             Draw a filled triangle using 3 arbitrary points
 ***************************************************************************************/
+
 // Fill a triangle - original Adafruit function works well and code footprint is small
 void TFT_ILI9341_ESP::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
@@ -661,7 +701,7 @@ void TFT_ILI9341_ESP::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t
 void TFT_ILI9341_ESP::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color) {
 
   int16_t i, j, byteWidth = (w + 7) / 8;
-  //fastSetup();
+
   for (j = 0; j < h; j++) {
     for (i = 0; i < w; i++ ) {
       if (pgm_read_byte(bitmap + j * byteWidth + i / 8) & (128 >> (i & 7))) {
@@ -700,15 +740,6 @@ void TFT_ILI9341_ESP::setTextSize(uint8_t s)
 {
   if (s>7) s = 7; // Limit the maximum size multiplier so byte variables can be used for rendering
   textsize = (s > 0) ? s : 1; // Don't allow font size 0
-}
-
-/***************************************************************************************
-** Function name:           setTextFont
-** Description:             Set the font for the print stream
-***************************************************************************************/
-void TFT_ILI9341_ESP::setTextFont(uint8_t f)
-{
-  textfont = (f > 0) ? f : 1; // Don't allow font 0
 }
 
 /***************************************************************************************
@@ -797,18 +828,40 @@ int16_t TFT_ILI9341_ESP::textWidth(const char *string, int font)
   char uniCode;
   char *widthtable;
 
-  if (font>0 && font<9)
+  if (font>1 && font<9)
   {
     widthtable = (char *)pgm_read_dword( &(fontdata[font].widthtbl ) ) - 32; //subtract the 32 outside the loop
 
     while (*string)
     {
       uniCode = *(string++);
-#ifdef LOAD_GLCD
-      if (font == 1) str_width += 6;
-      else
-#endif
+
       str_width += pgm_read_byte( widthtable + uniCode); // Normally we need to subract 32 from uniCode
+    }
+  }
+  else
+  {
+
+#ifdef LOAD_GFXFF
+    if(gfxFont) // New font
+    {
+      while (*string)
+      {
+        uniCode = *(string++);
+        uniCode -= pgm_read_byte(&gfxFont->first);
+        GFXglyph *glyph  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[uniCode]);
+        // If this is not the  last character then use xAdvance
+        if (*string) str_width += pgm_read_byte(&glyph->xAdvance);
+        // Else use the offset plus width since this can be bigger than xAdvance
+        else str_width += ((int8_t)pgm_read_byte(&glyph->xOffset) + pgm_read_byte(&glyph->width));
+      }
+    }
+    else
+#endif
+    {
+#ifdef LOAD_GLCD
+      while (*string++) str_width += 6;
+#endif
     }
   }
   return str_width * textsize;
@@ -827,10 +880,19 @@ uint16_t TFT_ILI9341_ESP::fontsLoaded(void)
 
 /***************************************************************************************
 ** Function name:           fontHeight
-** Description:             return the height of a font
+** Description:             return the height of a font (yAdvance for free fonts)
 ***************************************************************************************/
-int16_t TFT_ILI9341_ESP::fontHeight(int font)
+int16_t TFT_ILI9341_ESP::fontHeight(int16_t font)
 {
+#ifdef LOAD_GFXFF
+  if (font==1)
+  {
+    if(gfxFont) // New font
+    {
+      return pgm_read_byte(&gfxFont->yAdvance) * textsize;
+    }
+  }
+#endif
   return pgm_read_byte( &fontdata[font].height ) * textsize;
 }
 
@@ -840,12 +902,19 @@ int16_t TFT_ILI9341_ESP::fontHeight(int font)
 ***************************************************************************************/
 void TFT_ILI9341_ESP::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size)
 {
-#ifdef LOAD_GLCD
   if ((x >= (int16_t)_width)            || // Clip right
       (y >= (int16_t)_height)           || // Clip bottom
       ((x + 6 * size - 1) < 0) || // Clip left
       ((y + 8 * size - 1) < 0))   // Clip top
     return;
+
+#ifdef LOAD_GLCD
+//>>>>>>>>>>>>>>>>>>
+#ifdef LOAD_GFXFF
+  if(!gfxFont) { // 'Classic' built-in font
+#endif
+//>>>>>>>>>>>>>>>>>>
+
   boolean fillbg = (bg != color);
 
 spi_begin();
@@ -861,18 +930,18 @@ spi_begin();
     for (int8_t j = 0; j < 8; j++) {
       for (int8_t k = 0; k < 5; k++ ) {
         if (column[k] & mask) {
-          spiwrite(color >> 8);
-          spiwrite(color);
+          //_SPI->transfer(color >> 8);
+          _SPI->write16(color);
         }
         else {
-          spiwrite(bg >> 8);
-          spiwrite(bg);
+          //_SPI->transfer(bg >> 8);
+          _SPI->write16(bg);
         }
       }
 
       mask <<= 1;
-      spiwrite(bg >> 8);
-      spiwrite(bg);
+      //_SPI->transfer(bg >> 8);
+      _SPI->write16(bg);
     }
     *csport |= cspinmask;
   }
@@ -901,9 +970,167 @@ spi_begin();
       }
     }
   }
-spi_end();
 
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#ifdef LOAD_GFXFF
+  } else { // Custom font
+#endif
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #endif // LOAD_GLCD
+
+#ifdef LOAD_GFXFF
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Character is assumed previously filtered by write() to eliminate
+    // newlines, returns, non-printable characters, etc.  Calling drawChar()
+    // directly with 'bad' characters of font may cause mayhem!
+
+    c -= pgm_read_byte(&gfxFont->first);
+    GFXglyph *glyph  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c]);
+    uint8_t  *bitmap = (uint8_t *)pgm_read_dword(&gfxFont->bitmap);
+
+    uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+    uint8_t  w  = pgm_read_byte(&glyph->width),
+             h  = pgm_read_byte(&glyph->height),
+             xa = pgm_read_byte(&glyph->xAdvance);
+    int8_t   xo = pgm_read_byte(&glyph->xOffset),
+             yo = pgm_read_byte(&glyph->yOffset);
+    uint8_t  xx, yy, bits, bit=0;
+    int16_t  xo16, yo16;
+
+    if(size > 1) {
+      xo16 = xo;
+      yo16 = yo;
+    }
+
+    // Todo: Add character clipping here
+
+    // NOTE: THERE IS NO 'BACKGROUND' COLOR OPTION ON CUSTOM FONTS.
+    // THIS IS ON PURPOSE AND BY DESIGN.  The background color feature
+    // has typically been used with the 'classic' font to overwrite old
+    // screen contents with new data.  This ONLY works because the
+    // characters are a uniform size; it's not a sensible thing to do with
+    // proportionally-spaced fonts with glyphs of varying sizes (and that
+    // may overlap).  To replace previously-drawn text when using a custom
+    // font, use the getTextBounds() function to determine the smallest
+    // rectangle encompassing a string, erase the area with fillRect(),
+    // then draw new text.  This WILL infortunately 'blink' the text, but
+    // is unavoidable.  Drawing 'background' pixels will NOT fix this,
+    // only creates a new set of problems.  Have an idea to work around
+    // this (a canvas object type for MCUs that can afford the RAM and
+    // displays supporting setAddrWindow() and pushColors()), but haven't
+    // implemented this yet.
+
+// Here we have 3 versions of the same function just for evaluation purposes
+// Comment out the next two #defines to revert to the slower Adafruit implementation
+
+// If FAST_LINE is defined then the free fonts are rendered using horizontal lines
+// this makes rendering fonts 2-5 times faster. Particularly good for large fonts.
+// This is an elegant solution since it still uses generic functions present in the
+// stock library.
+
+// If FAST_SHIFT is defined then a slightly faster (at least for AVR processors)
+// shifting bit mask is used
+
+// Free fonts don't look good when the size multiplier is >1 so we could remove
+// code if this is not wanted and speed things up
+
+#define FAST_HLINE
+#define FAST_SHIFT
+//FIXED_SIZE is an option in User_Setup.h that only works with FAST_LINE enabled
+
+#ifdef FIXED_SIZE
+    x+=xo; // Save 88 bytes of FLASH
+    y+=yo;
+#endif
+
+#ifdef FAST_HLINE
+
+  #ifdef FAST_SHIFT
+    uint16_t hpc = 0; // Horizontal foreground pixel count
+    for(yy=0; yy<h; yy++) {
+      for(xx=0; xx<w; xx++) {
+        if(bit == 0) {
+          bits = pgm_read_byte(&bitmap[bo++]);
+          bit  = 0x80;
+        }
+        if(bits & bit) hpc++;
+        else {
+          if (hpc) {
+#ifndef FIXED_SIZE
+            if(size == 1) drawFastHLine(x+xo+xx-hpc, y+yo+yy, hpc, color);
+            else fillRect(x+(xo16+xx-hpc)*size, y+(yo16+yy)*size, size*hpc, size, color);
+#else
+            drawFastHLine(x+xx-hpc, y+yy, hpc, color);
+#endif
+            hpc=0;
+          }
+        }
+        bit >>= 1;
+      }
+      // Draw pixels for this line as we are about to increment yy
+          if (hpc) {
+#ifndef FIXED_SIZE
+            if(size == 1) drawFastHLine(x+xo+xx-hpc, y+yo+yy, hpc, color);
+            else fillRect(x+(xo16+xx-hpc)*size, y+(yo16+yy)*size, size*hpc, size, color);
+#else
+            drawFastHLine(x+xx-hpc, y+yy, hpc, color);
+#endif
+            hpc=0;
+          }
+    }
+  #else
+    uint16_t hpc = 0; // Horizontal foreground pixel count
+    for(yy=0; yy<h; yy++) {
+      for(xx=0; xx<w; xx++) {
+        if(!(bit++ & 7)) {
+          bits = pgm_read_byte(&bitmap[bo++]);
+        }
+        if(bits & 0x80) hpc++;
+        else {
+          if (hpc) {
+            if(size == 1) drawFastHLine(x+xo+xx-hpc, y+yo+yy, hpc, color);
+            else fillRect(x+(xo16+xx-hpc)*size, y+(yo16+yy)*size, size*hpc, size, color);
+            hpc=0;
+          }
+        }
+        bits <<= 1;
+      }
+      // Draw pixels for this line as we are about to increment yy
+      if (hpc) {
+        if(size == 1) drawFastHLine(x+xo+xx-hpc, y+yo+yy, hpc, color);
+        else fillRect(x+(xo16+xx-hpc)*size, y+(yo16+yy)*size, size*hpc, size, color);
+        hpc=0;
+      }
+    }
+  #endif
+
+#else
+    for(yy=0; yy<h; yy++) {
+      for(xx=0; xx<w; xx++) {
+        if(!(bit++ & 7)) {
+          bits = pgm_read_byte(&bitmap[bo++]);
+        }
+        if(bits & 0x80) {
+          if(size == 1) {
+            drawPixel(x+xo+xx, y+yo+yy, color);
+          } else {
+            fillRect(x+(xo16+xx)*size, y+(yo16+yy)*size, size, size, color);
+          }
+        }
+        bits <<= 1;
+      }
+    }
+#endif
+#endif
+
+
+#ifdef LOAD_GLCD
+  #ifdef LOAD_GFXFF
+  } // End classic vs custom font
+  #endif
+#endif
+
+spi_end();
 }
 
 /***************************************************************************************
@@ -933,50 +1160,31 @@ void TFT_ILI9341_ESP::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t 
 
   spi_begin();
 
+  addr_col = 0xFFFF;
+  addr_row = 0xFFFF;
+
   // Column addr set
   *dcport &= ~dcpinmask;
   *csport &= ~cspinmask;
 
-  spiwrite(ILI9341_CASET);
+  _SPI->write(ILI9341_CASET);
 
   *dcport |= dcpinmask;
 
   _SPI->writePattern(&buffC[0], 4, 1);
 
-/*
-  spiwrite(x0 >> 8);
-  addr_col = 0xFFFF;
-  spiwrite(x0);
-  if(x1!=win_xe) {
-    spiwrite(x1 >> 8);
-    win_xe=x1;
-    spiwrite(x1);
-  }
-*/
-
   // Row addr set
   *dcport &= ~dcpinmask;
 
-  spiwrite(ILI9341_PASET);
+  _SPI->write(ILI9341_PASET);
 
   *dcport |= dcpinmask;
 
-_SPI->writePattern(&buffP[0], 4, 1);
-
-/*
-  spiwrite(y0 >> 8);
-  addr_row = 0xFFFF;
-  spiwrite(y0);
-  if(y1!=win_ye) {
-    spiwrite(y1 >> 8);
-    win_ye=y1;
-    spiwrite(y1);
-  }
-*/
+  _SPI->writePattern(&buffP[0], 4, 1);
 
   // write to RAM
   *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_RAMWR);
+  _SPI->write(ILI9341_RAMWR);
 
   //CS, HIGH;
   //*csport |= cspinmask;
@@ -985,44 +1193,7 @@ _SPI->writePattern(&buffP[0], 4, 1);
   spi_end();
 }
 
-/*
-void TFT_ILI9341_ESP::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
-{
-  spi_begin();
 
-  // Column addr set
-  *dcport &= ~dcpinmask;
-  *csport &= ~cspinmask;
-  spiwrite(ILI9341_CASET);
- 
-
-  *dcport |= dcpinmask;
-  spiwrite(x0 >> 8);
-  spiwrite(x0);
-  spiwrite(x1 >> 8);
-  spiwrite(x1);
-
-  // Row addr set
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_PASET);
-
-  *dcport |= dcpinmask;
-  spiwrite(y0 >> 8);
-  spiwrite(y0);
-  spiwrite(y1 >> 8);
-  spiwrite(y1);
-
-  // write to RAM
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_RAMWR);
-
-  //CS, HIGH;
-  //*csport |= cspinmask;
-  *dcport |= dcpinmask;
-
-  spi_end();
-}
-*/
 /***************************************************************************************
 ** Function name:           drawPixel
 ** Description:             push a single pixel at an arbitrary position
@@ -1035,186 +1206,42 @@ void TFT_ILI9341_ESP::drawPixel(uint16_t x, uint16_t y, uint16_t color)
 
   *csport &= ~cspinmask;
 
-if (addr_col != x) {
-  uint8_t buffC[] = { (uint8_t) (x >> 8), (uint8_t) x, (uint8_t) (x >> 8), (uint8_t) x };
+  // No need to send x if it has not changed (speeds things up)
+  if (addr_col != x) {
+    uint8_t buffC[] = { (uint8_t) (x >> 8), (uint8_t) x, (uint8_t) (x >> 8), (uint8_t) x };
 
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_CASET);
+    *dcport &= ~dcpinmask;
+    _SPI->write(ILI9341_CASET);
  
-  addr_col = x;
-  *dcport |= dcpinmask;
+    *dcport |= dcpinmask;
+    _SPI->writePattern(&buffC[0], 4, 1);
 
-  _SPI->writePattern(&buffC[0], 4, 1);
+    addr_col = x;
+  }
 
-  //spiwrite(x >> 8);
-  //spiwrite(x);
+  // No need to send y if it has not changed (speeds things up)
+  if (addr_row != y) {
+    uint8_t buffP[] = { (uint8_t) (y >> 8), (uint8_t) y, (uint8_t) (y >> 8), (uint8_t) y };
 
-  //spiwrite(x >> 8);
-  //spiwrite(x);
-}
-
-if (addr_row != y) {
-  uint8_t buffP[] = { (uint8_t) (y >> 8), (uint8_t) y, (uint8_t) (y >> 8), (uint8_t) y };
-
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_PASET);
+    *dcport &= ~dcpinmask;
+    _SPI->write(ILI9341_PASET);
  
-  addr_row = y;
-  *dcport |= dcpinmask;
+    *dcport |= dcpinmask;
+    _SPI->writePattern(&buffP[0], 4, 1);
 
-  _SPI->writePattern(&buffP[0], 4, 1);
-
-  //spiwrite(y >> 8);
-  //spiwrite(y);
-
-  //spiwrite(y >> 8);
-  //spiwrite(y);
-}
+    addr_row = y;
+  }
 
   *dcport &= ~dcpinmask;
-
-  spiwrite(ILI9341_RAMWR);
+  _SPI->write(ILI9341_RAMWR);
 
   *dcport |= dcpinmask;
-
-  spiwrite(color >> 8);
-  win_xe=x;
-  spiwrite(color);
-  win_ye=y;
+  _SPI->write16(color);
 
   *csport |= cspinmask;
 
   spi_end();
 }
-
-/*
-void TFT_ILI9341_ESP::fastPixel(uint16_t x, uint16_t y, uint16_t color)
-{
-  // Faster range checking, possible because x and y are unsigned
-  if ((x >= _width) || (y >= _height)) return;
-  spi_begin();
-
-  *csport &= ~cspinmask;
-
-if (addr_col != x) {
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_CASET);
- 
-  addr_col = x;
-  *dcport |= dcpinmask;
-
-  spiwrite(x >> 8);
-  spiwrite(x);
-}
-
-if (addr_row != y) {
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_PASET);
- 
-  addr_row = y;
-  *dcport |= dcpinmask;
-
-  spiwrite(y >> 8);
-  spiwrite(y);
-}
-
-  *dcport &= ~dcpinmask;
-
-  spiwrite(ILI9341_RAMWR);
-
-  *dcport |= dcpinmask;
-
-  spiwrite(color >> 8);
-  spiwrite(color);
-
-  *csport |= cspinmask;
-
-  spi_end();
-}
-*/
-
-/*
-void TFT_ILI9341_ESP::fastSetup(void)
-{
-  spi_begin();
-
-  *dcport &= ~dcpinmask;
-  *csport &= ~cspinmask;
-
-  spiwrite(ILI9341_CASET);
- 
-  *dcport |= dcpinmask;
-  spiwrite(0);
-  addr_col = 0;
-  spiwrite(0);
-  win_xe=_width-1;
-  spiwrite(win_xe >> 8);
-  spiwrite(win_xe);
-
-  *dcport &= ~dcpinmask;
-
-  spiwrite(ILI9341_PASET);
- 
-  *dcport |= dcpinmask;
-  spiwrite(0);
-  addr_row = 0;
-  spiwrite(0);
-  win_ye=_height-1;
-  spiwrite(win_ye >> 8);
-  spiwrite(win_ye);
-
-  *csport |= cspinmask;
-
-  spi_end();
-}
-*/
-
-/*
-void TFT_ILI9341_ESP::drawPixel(uint16_t x, uint16_t y, uint16_t color)
-{
-  // Faster range checking, possible because x and y are unsigned
-  if ((x >= _width) || (y >= _height)) return;
-  spi_begin();
-
-  // Column addr set
-  *dcport &= ~dcpinmask;
-  *csport &= ~cspinmask;
-  spiwrite(ILI9341_CASET);
- 
-
-  *dcport |= dcpinmask;
-  spiwrite(x >> 8);
-  spiwrite(x; x++); 
-  spiwrite(x >> 8);
-  spiwrite(x);
-
-  // Row addr set
-  *dcport &= ~dcpinmask;
-  //*csport &= ~cspinmask;
-  spiwrite(ILI9341_PASET);
-
-  *dcport |= dcpinmask;
-  spiwrite(y >> 8);
-  spiwrite(y; y++); 
-  spiwrite(y >> 8);
-  spiwrite(y);
-
-  // write to RAM
-  *dcport &= ~dcpinmask;
-  spiwrite(ILI9341_RAMWR);
-
-  *dcport |= dcpinmask;
-
-  spiwrite(color >> 8);
-  spiwrite(color);
-
-  //CS, HIGH;
-  *csport |= cspinmask;
-  //*dcport |= dcpinmask;
-
-  spi_end();
-}
-*/
 
 /***************************************************************************************
 ** Function name:           pushColor
@@ -1226,8 +1253,7 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color)
 
   *csport &= ~cspinmask;
 
-  spiwrite(color>>8);
-  spiwrite(color);
+  _SPI->write16(color);
 
   *csport |= cspinmask;
 
@@ -1264,16 +1290,11 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color, uint16_t len)
 
 void TFT_ILI9341_ESP::pushColors(uint16_t *data, uint8_t len)
 {
-  uint16_t color;
   spi_begin();
 
   *csport &= ~cspinmask;
 
-  while (len--) {
-    color = *(data++);
-    spiwrite(color >> 8);
-    spiwrite(color);
-  }
+  while (len--) _SPI->write16(*(data++));
 
   *csport |= cspinmask;
 
@@ -1293,7 +1314,7 @@ void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint16_t len)
 
   *csport &= ~cspinmask;
 
-  while (len--) spiwrite(*(data++));
+  while (len--) _SPI->write(*(data++));
 
   *csport |= cspinmask;
 
@@ -1372,7 +1393,6 @@ void TFT_ILI9341_ESP::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t co
   setAddrWindow(x, y, x, y + h - 1);
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
-  //while(h>32) { _SPI->writePattern(&colorBin[0], 2, 32); h-=32;}
   _SPI->writePattern(&colorBin[0], 2, h);
 
   *csport |= cspinmask;
@@ -1395,7 +1415,6 @@ void TFT_ILI9341_ESP::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t co
   setAddrWindow(x, y, x + w - 1, y);
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
-  //while(w>32) { _SPI->writePattern(&colorBin[0], 2, 32); w-=32;}
   _SPI->writePattern(&colorBin[0], 2, w);
 
   *csport |= cspinmask;
@@ -1419,7 +1438,6 @@ void TFT_ILI9341_ESP::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint1
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
   uint32_t n = (uint32_t)w * (uint32_t)h;
-  //while(n>32) { _SPI->writePattern(&colorBin[0], 2, 32); n-=32;}
   _SPI->writePattern(&colorBin[0], 2, n);
 
   *csport |= cspinmask;
@@ -1490,12 +1508,9 @@ void TFT_ILI9341_ESP::setRotation(uint8_t m)
 
   }
   spi_end();
-  //fastSetup(); // Just incase setRotation is called inside a fast pixel loop
+
   addr_row = 0xFFFF;
   addr_col = 0xFFFF;
-  win_xe = 0xFFFF;
-  win_ye = 0xFFFF;
-
 }
 
 /***************************************************************************************
@@ -1515,12 +1530,27 @@ void TFT_ILI9341_ESP::invertDisplay(boolean i)
 ** Function name:           write
 ** Description:             draw characters piped through serial stream
 ***************************************************************************************/
-size_t TFT_ILI9341_ESP::write(uint8_t uniCode)
+size_t TFT_ILI9341_ESP::write(uint8_t utf8)
 {
-  if (uniCode == '\r') return 1;
-  unsigned int width = 0;
-  unsigned int height = 0;
-  //Serial.print((char) uniCode); // Debug line sends all printed TFT text to serial port
+  if (utf8 == '\r') return 1;
+
+  uint8_t uniCode = utf8;        // Work with a copy
+  if (utf8 == '\n') uniCode+=22; // Make it a valid space character to stop errors
+
+  uint16_t width = 0;
+  uint16_t height = 0;
+
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv DEBUG vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  //Serial.print((uint8_t) uniCode); // Debug line sends all printed TFT text to serial port
+  //Serial.println(uniCode, HEX); // Debug line sends all printed TFT text to serial port
+  //delay(5);                     // Debug optional wait for serial port to flush through
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DEBUG ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef LOAD_GFXFF
+  if(!gfxFont) {
+#endif
+//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 #ifdef LOAD_FONT2
   if (textfont == 2)
@@ -1543,7 +1573,6 @@ size_t TFT_ILI9341_ESP::write(uint8_t uniCode)
     {
       // Uses the fontinfo struct array to avoid lots of 'if' or 'switch' statements
       // A tad slower than above but this is not significant and is more convenient for the RLE fonts
-      // Yes, this code can be needlessly executed when textfont == 1...
       width = pgm_read_byte( pgm_read_dword( &(fontdata[textfont].widthtbl ) ) + uniCode-32 );
       height= pgm_read_byte( &fontdata[textfont].height );
     }
@@ -1562,7 +1591,7 @@ size_t TFT_ILI9341_ESP::write(uint8_t uniCode)
 
   height = height * textsize;
 
-  if (uniCode == '\n') {
+  if (utf8 == '\n') {
     cursor_y += height;
     cursor_x  = 0;
   }
@@ -1575,6 +1604,42 @@ size_t TFT_ILI9341_ESP::write(uint8_t uniCode)
     }
     cursor_x += drawChar(uniCode, cursor_x, cursor_y, textfont);
   }
+
+//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef LOAD_GFXFF
+  } // Custom GFX font
+  else
+  {
+
+    if(utf8 == '\n') {
+      cursor_x  = 0;
+      cursor_y += (int16_t)textsize *
+                  (uint8_t)pgm_read_byte(&gfxFont->yAdvance);
+    } else if(uniCode != '\r') {
+      uint8_t first = pgm_read_byte(&gfxFont->first);
+      if((uniCode >= first) && (uniCode <= (uint8_t)pgm_read_byte(&gfxFont->last))) {
+        uint8_t   c2    = uniCode - pgm_read_byte(&gfxFont->first);
+        GFXglyph *glyph = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c2]);
+        uint8_t   w     = pgm_read_byte(&glyph->width),
+                  h     = pgm_read_byte(&glyph->height);
+        if((w > 0) && (h > 0)) { // Is there an associated bitmap?
+          int16_t xo = (int8_t)pgm_read_byte(&glyph->xOffset);
+          if(textwrap && ((cursor_x + textsize * (xo + w)) >= _width)) {
+            // Drawing character would go off right edge; wrap to new line
+            cursor_x  = 0;
+            cursor_y += (int16_t)textsize *
+                        (uint8_t)pgm_read_byte(&gfxFont->yAdvance);
+          }
+          drawChar(cursor_x, cursor_y, uniCode, textcolor, textbgcolor, textsize);
+        }
+        cursor_x += pgm_read_byte(&glyph->xAdvance) * (int16_t)textsize;
+      }
+    }
+
+  }
+#endif // LOAD_GFXFF
+//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
   return 1;
 }
 
@@ -1588,22 +1653,51 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
   if (font==1)
   {
 #ifdef LOAD_GLCD
-      drawChar(x, y, uniCode, textcolor, textbgcolor, textsize);
-      return 6 * textsize;
+  #ifndef LOAD_GFXFF
+    drawChar(x, y, uniCode, textcolor, textbgcolor, textsize);
+    return 6 * textsize;
+  #endif
 #else
-      return 0;
+  #ifndef LOAD_GFXFF
+    return 0;
+  #endif
+#endif
+
+#ifdef LOAD_GFXFF
+      drawChar(x, y, uniCode, textcolor, textbgcolor, textsize);
+      if(!gfxFont) { // 'Classic' built-in font
+  #ifdef LOAD_GLCD
+        return 6 * textsize;
+  #else
+        return 0;
+  #endif
+      }
+      else
+      {
+        uint8_t first = pgm_read_byte(&gfxFont->first);
+        if((uniCode >= first) && (uniCode <= (uint8_t)pgm_read_byte(&gfxFont->last)))
+        {
+          uint8_t   c2    = uniCode - pgm_read_byte(&gfxFont->first);
+          GFXglyph *glyph = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c2]);
+          return pgm_read_byte(&glyph->xAdvance) * textsize;
+        }
+        else
+        {
+          return 0;
+        }
+      }
 #endif
   }
 
   int width  = 0;
   int height = 0;
-  uint32_t flash_address = 0; // 16 bit address OK for Arduino if font files <60K
+  uint32_t flash_address = 0;
   uniCode -= 32;
 
 #ifdef LOAD_FONT2
   if (font == 2)
   {
-      // This is 20us faster than using the fontdata structure (0.413ms per character instead of 0.433ms)
+      // This is faster than using the fontdata structure
       flash_address = pgm_read_dword(&chrtbl_f16[uniCode]);
       width = pgm_read_byte(widtbl_f16 + uniCode);
       height = chr_hgt_f16;
@@ -1630,12 +1724,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
   int pY      = y;
   byte line = 0;
 
-  byte tl = textcolor;
-  byte th = textcolor >> 8;
-  byte bl = textbgcolor;
-  byte bh = textbgcolor >> 8;
-
-#ifdef LOAD_FONT2 // chop out 962 bytes of code if we do not need it
+#ifdef LOAD_FONT2 // chop out code if we do not need it
   if (font == 2) {
     w = w + 6; // Should be + 7 but we need to compensate for width increment
     w = w / 8;
@@ -1694,12 +1783,10 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
           mask = 0x80;
           while (mask) {
             if (line & mask) {
-              spiwrite(th);
-              spiwrite(tl);
+              _SPI->write16(textcolor);
             }
             else {
-              spiwrite(bh);
-              spiwrite(bl);
+              _SPI->write16(textbgcolor);
             }
             mask = mask >> 1;
           }
@@ -1755,13 +1842,11 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
             if (ts) {
               tnp = np;
               while (tnp--) {
-                spiwrite(th);
-                spiwrite(tl);
+                _SPI->write16(textcolor);
               }
             }
             else {
-              spiwrite(th);
-              spiwrite(tl);
+              _SPI->write16(textcolor);
             }
             px += textsize;
 
@@ -1822,93 +1907,153 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
 int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int font)
 {
   int16_t sumX = 0;
-  uint8_t padding = 1;
-  unsigned int cheight = 0;
+  uint8_t padding = 1, baseline = 0;
+  uint16_t cwidth = 0;
+  uint16_t cheight = 0;
+
+#ifdef LOAD_GFXFF
+  if (font == 1) {
+    if(gfxFont) {
+      cheight = glyph_ab * textsize;
+      poY += cheight; // Adjust for baseline datum of free fonts
+      baseline = cheight;
+      padding =101; // Different padding method used for Free Fonts
+
+      // We need to make an adjustment for the botom of the string (eg 'y' character)
+      if ((textdatum == BL_DATUM) || (textdatum == BC_DATUM) || (textdatum == BR_DATUM)) {
+        cheight += glyph_bb * textsize;
+      }
+    }
+  }
+#endif
 
   if (textdatum || padX)
   {
     // Find the pixel width of the string in the font
-    unsigned int cwidth  = textWidth(string, font);
+    cwidth  = textWidth(string, font);
 
-    // Get the pixel height of the font
-    cheight = pgm_read_byte( &fontdata[font].height ) * textsize;
+    // If it is not font 1 (GLCD or free font) get the basline and pixel height of the font
+    if (font!=1) {
+      baseline = pgm_read_byte( &fontdata[font].baseline ) * textsize;
+      cheight = fontHeight(font);
+    }
 
     switch(textdatum) {
       case TC_DATUM:
         poX -= cwidth/2;
-        padding = 2;
+        padding += 1;
         break;
       case TR_DATUM:
         poX -= cwidth;
-        padding = 3;
+        padding += 2;
         break;
       case ML_DATUM:
         poY -= cheight/2;
-        padding = 1;
+        //padding += 0;
         break;
       case MC_DATUM:
         poX -= cwidth/2;
         poY -= cheight/2;
-        padding = 2;
+        padding += 1;
         break;
       case MR_DATUM:
         poX -= cwidth;
         poY -= cheight/2;
-        padding = 3;
+        padding += 2;
         break;
       case BL_DATUM:
         poY -= cheight;
-        padding = 1;
+        //padding += 0;
         break;
       case BC_DATUM:
         poX -= cwidth/2;
         poY -= cheight;
-        padding = 2;
+        padding += 1;
         break;
       case BR_DATUM:
         poX -= cwidth;
         poY -= cheight;
-        padding = 3;
+        padding += 2;
+        break;
+      case L_BASELINE:
+        poY -= baseline;
+        //padding += 0;
+        break;
+      case C_BASELINE:
+        poX -= cwidth/2;
+        poY -= baseline;
+        //padding += 1;
+        break;
+      case R_BASELINE:
+        poX -= cwidth;
+        poY -= baseline;
+        padding += 2;
         break;
     }
     // Check coordinates are OK, adjust if not
     if (poX < 0) poX = 0;
     if (poX+cwidth>_width)   poX = _width - cwidth;
     if (poY < 0) poY = 0;
-    if (poY+cheight>_height) poY = _height - cheight;
+    if (poY+cheight-baseline>_height) poY = _height - cheight;
   }
+
+#ifdef LOAD_GFXFF
+  if ((font == 1) && (gfxFont) && (textcolor!=textbgcolor))
+    {
+      cheight = (glyph_ab + glyph_bb) * textsize;
+      fillRect(poX, poY - glyph_ab * textsize, cwidth, cheight, textbgcolor);
+      padding -=100;
+    }
+#endif
 
   while (*string) sumX += drawChar(*(string++), poX+sumX, poY, font);
 
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv DEBUG vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// Switch on debugging for the padding areas
 //#define PADDING_DEBUG
 
 #ifndef PADDING_DEBUG
-  if((padX>sumX) && (textcolor!=textbgcolor))
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DEBUG ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  if((padX>cwidth) && (textcolor!=textbgcolor))
   {
-    int padXc = poX+sumX; // Maximum left side padding
+    int16_t padXc = poX+cwidth;
+#ifdef LOAD_GFXFF
+    if ((font == 1) && (gfxFont))
+    {
+      poY -= glyph_ab * textsize;
+    }
+#endif
     switch(padding) {
       case 1:
-        fillRect(padXc,poY,padX-sumX,cheight, textbgcolor);
+        fillRect(padXc,poY,padX-cwidth,cheight, textbgcolor);
         break;
       case 2:
-        fillRect(padXc,poY,(padX-sumX)>>1,cheight, textbgcolor);
-        padXc = (padX-sumX)>>1;
+        fillRect(padXc,poY,(padX-cwidth)>>1,cheight, textbgcolor);
+        padXc = (padX-cwidth)>>1;
         if (padXc>poX) padXc = poX;
-        fillRect(poX - padXc,poY,(padX-sumX)>>1,cheight, textbgcolor);
+        fillRect(poX - padXc,poY,(padX-cwidth)>>1,cheight, textbgcolor);
         break;
       case 3:
         if (padXc>padX) padXc = padX;
-        fillRect(poX + sumX - padXc,poY,padXc-sumX,cheight, textbgcolor);
+        fillRect(poX + cwidth - padXc,poY,padXc-cwidth,cheight, textbgcolor);
         break;
     }
   }
+
+
 #else
 
-  // This is debug code to show text (green box) and blanked (white box) areas
-  // to show that the padding areas are being correctly sized and positioned
+//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv DEBUG vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// This is debug code to show text (green box) and blanked (white box) areas
+// It shows that the padding areas are being correctly sized and positioned
+
   if((padX>sumX) && (textcolor!=textbgcolor))
   {
-    int padXc = poX+sumX; // Maximum left side padding
+    int16_t padXc = poX+sumX; // Maximum left side padding
+#ifdef LOAD_GFXFF
+    if ((font == 1) && (gfxFont)) poY -= glyph_ab;
+#endif
     drawRect(poX,poY,sumX,cheight, TFT_GREEN);
     switch(padding) {
       case 1:
@@ -1927,6 +2072,8 @@ int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int fo
     }
   }
 #endif
+//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DEBUG ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 return sumX;
 }
@@ -1952,7 +2099,7 @@ int16_t TFT_ILI9341_ESP::drawCentreString(const char *string, int dX, int poY, i
 int16_t TFT_ILI9341_ESP::drawRightString(const char *string, int dX, int poY, int font)
 {
   byte tempdatum = textdatum;
-  int sumX = 0;
+  int16_t sumX = 0;
   textdatum = TR_DATUM;
   sumX = drawString(string, dX, poY, font);
   textdatum = tempdatum;
@@ -1974,7 +2121,7 @@ int16_t TFT_ILI9341_ESP::drawNumber(long long_num, int poX, int poY, int font)
 ** Function name:           drawFloat
 ** Descriptions:            drawFloat, prints 7 non zero digits maximum
 ***************************************************************************************/
-// Adapted to assemble and print a string, this permits alignment relative to a datum
+// Assemble and print a string, this permits alignment relative to a datum
 // looks complicated but much more compact and actually faster than using print class
 int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, int font)
 {
@@ -2039,6 +2186,60 @@ int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, 
   return drawString(str, poX, poY, font);
 }
 
+/***************************************************************************************
+** Function name:           setFreeFont
+** Descriptions:            Sets the GFX free font to use
+***************************************************************************************/
+
+#ifdef LOAD_GFXFF
+
+void TFT_ILI9341_ESP::setFreeFont(const GFXfont *f) {
+  //textdatum = L_BASELINE;
+  textfont = 1;
+  gfxFont = (GFXfont *)f;
+
+  // Save above baseline (for say H)  and below baseline (for y tail) heights 
+  uint16_t uniCode = FF_HEIGHT - pgm_read_byte(&gfxFont->first);
+  GFXglyph *glyph1  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[uniCode]);
+  glyph_ab = -pgm_read_byte(&glyph1->yOffset);
+
+  uniCode = FF_BOTTOM - pgm_read_byte(&gfxFont->first);
+  GFXglyph *glyph2  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[uniCode]);
+  glyph_bb = pgm_read_byte(&glyph2->height) + (int8_t)pgm_read_byte(&glyph2->yOffset);
+}
+
+/***************************************************************************************
+** Function name:           setTextFont
+** Description:             Set the font for the print stream
+***************************************************************************************/
+void TFT_ILI9341_ESP::setTextFont(uint8_t f)
+{
+  textfont = (f > 0) ? f : 1; // Don't allow font 0
+  gfxFont = NULL;
+}
+
+#else
+
+/***************************************************************************************
+** Function name:           setFreeFont
+** Descriptions:            Sets the GFX free font to use
+***************************************************************************************/
+
+// Alternative to setTextFont() so we don't need two different named functions
+void TFT_ILI9341_ESP::setFreeFont(uint8_t font) {
+  setTextFont(font);
+}
+
+/***************************************************************************************
+** Function name:           setTextFont
+** Description:             Set the font for the print stream
+***************************************************************************************/
+void TFT_ILI9341_ESP::setTextFont(uint8_t f)
+{
+  textfont = (f > 0) ? f : 1; // Don't allow font 0
+}
+
+#endif
 
 /***************************************************
   The majority of code in this file is "FunWare", the only condition of use of
@@ -2053,8 +2254,6 @@ int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, 
 
   If any other conditions of use have been missed then please raise this as an
   issue on GitHub:
-
-  https://github.com/Bodmer/TFT_ILI9341_ESP
 
 
 /***************************************************
@@ -2084,7 +2283,7 @@ int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, 
   Some member funtions have been imported from the Adafruit_GFX
   library. The license associated with these is reproduced below.
 
-  ORIGINAL LIBRARY HEADER from Adafruit_GFX library
+  ORIGINAL LIBRARY HEADER from Adafruit_GFX.cpp
 
   This is the core graphics library for all our displays, providing a common
   set of graphics primitives (points, lines, circles, etc.).  It needs to be
@@ -2122,7 +2321,7 @@ int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, 
 
 /****************************************************
 
-  Incompliance with the licence.txt file for the Adafruit_GFX library the
+  In compliance with the licence.txt file for the Adafruit_GFX library the
   following is included.
 
   Software License Agreement (BSD License)
