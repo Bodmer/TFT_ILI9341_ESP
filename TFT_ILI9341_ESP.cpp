@@ -127,11 +127,11 @@ void TFT_ILI9341_ESP::spiwrite(uint8_t c)
 ***************************************************************************************/
 void TFT_ILI9341_ESP::writecommand(uint8_t c)
 {
-  *dcport &= ~dcpinmask;
-  *csport &= ~cspinmask;
+  GPOC = dcpinmask;
+  GPOC = cspinmask;
   _SPI->transfer(c);
-  *csport |= cspinmask;
-  *dcport |= dcpinmask;
+  GPOS = cspinmask;
+  GPOS = dcpinmask;
 }
 
 /***************************************************************************************
@@ -140,9 +140,9 @@ void TFT_ILI9341_ESP::writecommand(uint8_t c)
 ***************************************************************************************/
 void TFT_ILI9341_ESP::writedata(uint8_t c)
 {
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
   _SPI->transfer(c);
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 }
 
 /***************************************************************************************
@@ -161,9 +161,9 @@ void TFT_ILI9341_ESP::begin(void)
 void TFT_ILI9341_ESP::init(void)
 {
   csport    = portOutputRegister(digitalPinToPort(_cs));
-  cspinmask = digitalPinToBitMask(_cs);
+  cspinmask = (uint32_t) digitalPinToBitMask(_cs);
   dcport    = portOutputRegister(digitalPinToPort(_dc));
-  dcpinmask = digitalPinToBitMask(_dc);
+  dcpinmask = (uint32_t) digitalPinToBitMask(_dc);
 
   _SPI->begin();
 
@@ -305,11 +305,11 @@ void TFT_ILI9341_ESP::init(void)
 /*
 // Midpoint circle algorithm, we can optimise this since y = 0 on first pass
 // and we can eliminate the multiply as well
-void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t radius, uint16_t color)
+void TFT_ILI9341_ESP::drawCircle(int32_t x0, int32_t y0, int32_t radius, uint32_t color)
 {
-    int16_t x = radius;
-    int16_t y = 0;
-    int16_t err = 0;
+    int32_t x = radius;
+    int32_t y = 0;
+    int32_t err = 0;
 
     while (x >= y)
     {
@@ -338,12 +338,12 @@ void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t radius, uint16_
 */
 
 // Optimised midpoint circle algorithm
-void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
+void TFT_ILI9341_ESP::drawCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color)
 {
-  int16_t  x  = 0;
-  int16_t  dx = 1;
-  int16_t  dy = r+r;
-  int16_t  p  = -(r>>1);
+  int32_t  x  = 0;
+  int32_t  dx = 1;
+  int32_t  dy = r+r;
+  int32_t  p  = -(r>>1);
 
   // These are ordered to minimise coordinate changes in x or y
   // drawPixel can then send fewer bounding box commands
@@ -383,12 +383,12 @@ void TFT_ILI9341_ESP::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t col
 ** Function name:           drawCircleHelper
 ** Description:             Support function for circle drawing
 ***************************************************************************************/
-void TFT_ILI9341_ESP::drawCircleHelper( int16_t x0, int16_t y0, int16_t r, uint8_t cornername, uint16_t color)
+void TFT_ILI9341_ESP::drawCircleHelper( int32_t x0, int32_t y0, int32_t r, uint8_t cornername, uint32_t color)
 {
-  int16_t f     = 1 - r;
-  int16_t ddF_x = 1;
-  int16_t ddF_y = -2 * r;
-  int16_t x     = 0;
+  int32_t f     = 1 - r;
+  int32_t ddF_x = 1;
+  int32_t ddF_y = -2 * r;
+  int32_t x     = 0;
 
   while (x < r) {
     if (f >= 0) {
@@ -422,23 +422,73 @@ void TFT_ILI9341_ESP::drawCircleHelper( int16_t x0, int16_t y0, int16_t r, uint8
 ** Function name:           fillCircle
 ** Description:             draw a filled circle
 ***************************************************************************************/
-void TFT_ILI9341_ESP::fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
+/*
+void TFT_ILI9341_ESP::fillCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color)
 {
   drawFastVLine(x0, y0 - r, r + r + 1, color);
   fillCircleHelper(x0, y0, r, 3, 0, color);
 }
+*/
+
+// Optimised midpoint circle algorithm
+void TFT_ILI9341_ESP::fillCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color)
+
+{
+  int32_t  x  = 0;
+  int32_t  dx = 1;
+  int32_t  dy = r+r;
+  int32_t  p  = -(r>>1);
+
+  drawFastVLine(x0, y0 - r, dy+1, color);
+
+  while(x<r){
+
+    if(p>=0) {
+      dy-=2;
+      p-=dy;
+      r--;
+    }
+
+    dx+=2;
+    p+=dx;
+
+    x++;
+
+    drawFastVLine(x0 + x, y0 - r, 2 * r+1, color);
+    drawFastVLine(x0 - x, y0 - r, 2 * r+1, color);
+    drawFastVLine(x0 + r, y0 - x, 2 * x+1, color);
+    drawFastVLine(x0 - r, y0 - x, 2 * x+1, color);
+
+  }
+}
+
+
+/*
+// Another algorithm, this one teds to produce less pretty circles with odd edge pixels
+void TFT_ILI9341_ESP::fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
+{
+  for (int y1 = -r; y1 <= 0; y1++)
+    for (int x1 = -r; x1 <= 0; x1++)
+      if (x1 * x1 + y1 * y1 <= r * r)
+      {
+        drawFastHLine(x + x1, y + y1, 2 * (-x1), color);
+        drawFastHLine(x + x1, y - y1, 2 * (-x1), color);
+        break;
+      }
+}
+*/
 
 /***************************************************************************************
 ** Function name:           fillCircleHelper
 ** Description:             Support function for filled circle drawing
 ***************************************************************************************/
 // Used to do circles and roundrects
-void TFT_ILI9341_ESP::fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, int16_t delta, uint16_t color)
+void TFT_ILI9341_ESP::fillCircleHelper(int32_t x0, int32_t y0, int32_t r, uint8_t cornername, int32_t delta, uint32_t color)
 {
-  int16_t f     = 1 - r;
-  int16_t ddF_x = 1;
-  int16_t ddF_y = -r - r;
-  int16_t x     = 0;
+  int32_t f     = 1 - r;
+  int32_t ddF_x = 1;
+  int32_t ddF_y = -r - r;
+  int32_t x     = 0;
 
   delta++;
   while (x < r) {
@@ -470,7 +520,7 @@ void TFT_ILI9341_ESP::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry
 {
   if (rx<2) return;
   if (ry<2) return;
-  int16_t x, y;
+  int32_t x, y;
   int32_t rx2 = rx * rx;
   int32_t ry2 = ry * ry;
   int32_t fx2 = 4 * rx2;
@@ -516,7 +566,7 @@ void TFT_ILI9341_ESP::fillEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry
 {
   if (rx<2) return;
   if (ry<2) return;
-  int16_t x, y;
+  int32_t x, y;
   int32_t rx2 = rx * rx;
   int32_t ry2 = ry * ry;
   int32_t fx2 = 4 * rx2;
@@ -555,7 +605,7 @@ void TFT_ILI9341_ESP::fillEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry
 ** Function name:           fillScreen
 ** Description:             Clear the screen to defined colour
 ***************************************************************************************/
-void TFT_ILI9341_ESP::fillScreen(uint16_t color)
+void TFT_ILI9341_ESP::fillScreen(uint32_t color)
 {
   fillRect(0, 0, _width, _height, color);
 }
@@ -565,7 +615,7 @@ void TFT_ILI9341_ESP::fillScreen(uint16_t color)
 ** Description:             Draw a rectangle outline
 ***************************************************************************************/
 // Draw a rectangle
-void TFT_ILI9341_ESP::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+void TFT_ILI9341_ESP::drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
 {
   drawFastHLine(x, y, w, color);
   drawFastHLine(x, y + h - 1, w, color);
@@ -578,7 +628,7 @@ void TFT_ILI9341_ESP::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint1
 ** Description:             Draw a rounded corner rectangle outline
 ***************************************************************************************/
 // Draw a rounded rectangle
-void TFT_ILI9341_ESP::drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r, uint16_t color)
+void TFT_ILI9341_ESP::drawRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t color)
 {
   // smarter version
   drawFastHLine(x + r  , y    , w - r - r, color); // Top
@@ -597,7 +647,7 @@ void TFT_ILI9341_ESP::drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, 
 ** Description:             Draw a rounded corner filled rectangle
 ***************************************************************************************/
 // Fill a rounded rectangle
-void TFT_ILI9341_ESP::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r, uint16_t color)
+void TFT_ILI9341_ESP::fillRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t color)
 {
   // smarter version
   fillRect(x + r, y, w - r - r, h, color);
@@ -612,7 +662,7 @@ void TFT_ILI9341_ESP::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, 
 ** Description:             Draw a triangle outline using 3 arbitrary points
 ***************************************************************************************/
 // Draw a triangle
-void TFT_ILI9341_ESP::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
+void TFT_ILI9341_ESP::drawTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color)
 {
   drawLine(x0, y0, x1, y1, color);
   drawLine(x1, y1, x2, y2, color);
@@ -625,9 +675,9 @@ void TFT_ILI9341_ESP::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y
 ***************************************************************************************/
 
 // Fill a triangle - original Adafruit function works well and code footprint is small
-void TFT_ILI9341_ESP::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
+void TFT_ILI9341_ESP::fillTriangle ( int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color)
 {
-  int16_t a, b, y, last;
+  int32_t a, b, y, last;
 
   // Sort coordinates by Y order (y2 >= y1 >= y0)
   if (y0 > y1) {
@@ -650,7 +700,7 @@ void TFT_ILI9341_ESP::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t
     return;
   }
 
-  int16_t
+  int32_t
   dx01 = x1 - x0,
   dy01 = y1 - y0,
   dx02 = x2 - x0,
@@ -700,7 +750,7 @@ void TFT_ILI9341_ESP::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t
 ***************************************************************************************/
 void TFT_ILI9341_ESP::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color) {
 
-  int16_t i, j, byteWidth = (w + 7) / 8;
+  int32_t i, j, byteWidth = (w + 7) / 8;
 
   for (j = 0; j < h; j++) {
     for (i = 0; i < w; i++ ) {
@@ -900,7 +950,7 @@ int16_t TFT_ILI9341_ESP::fontHeight(int16_t font)
 ** Function name:           drawChar
 ** Description:             draw a single character in the Adafruit GLCD font
 ***************************************************************************************/
-void TFT_ILI9341_ESP::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size)
+void TFT_ILI9341_ESP::drawChar(int32_t x, int32_t y, unsigned char c, uint32_t color, uint32_t bg, uint8_t size)
 {
   if ((x >= (int16_t)_width)            || // Clip right
       (y >= (int16_t)_height)           || // Clip bottom
@@ -943,7 +993,7 @@ spi_begin();
       //_SPI->transfer(bg >> 8);
       _SPI->write16(bg);
     }
-    *csport |= cspinmask;
+    GPOS = cspinmask;
   }
   else
   {
@@ -1143,7 +1193,7 @@ void TFT_ILI9341_ESP::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
   spi_begin();
   setAddrWindow(x0, y0, x1, y1);
-  *csport |= cspinmask;
+  GPOS = cspinmask;
   spi_end();
 }
 
@@ -1153,42 +1203,66 @@ void TFT_ILI9341_ESP::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 ***************************************************************************************/
 // Chip select stays low, use setWindow() from sketches
 
-void TFT_ILI9341_ESP::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
-  uint8_t buffC[] = { (uint8_t) (x0 >> 8), (uint8_t) x0, (uint8_t) (x1 >> 8), (uint8_t) x1 };
-  uint8_t buffP[] = { (uint8_t) (y0 >> 8), (uint8_t) y0, (uint8_t) (y1 >> 8), (uint8_t) y1 };
-
   spi_begin();
 
   addr_col = 0xFFFF;
   addr_row = 0xFFFF;
 
   // Column addr set
-  *dcport &= ~dcpinmask;
-  *csport &= ~cspinmask;
+  GPOC = dcpinmask;
+  GPOC = cspinmask;
 
-  _SPI->write(ILI9341_CASET);
+  const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
 
-  *dcport |= dcpinmask;
+  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
-  _SPI->writePattern(&buffC[0], 4, 1);
+  SPI1W0 = ILI9341_CASET;
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
+
+  GPOS = dcpinmask;
+
+  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+  SPI1W0 = (x0 >> 8) | (x0 << 8);
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
+
+  SPI1W0 = (x1 >> 8) | (x1 << 8);
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
 
   // Row addr set
-  *dcport &= ~dcpinmask;
+  GPOC = dcpinmask;
 
-  _SPI->write(ILI9341_PASET);
+  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
-  *dcport |= dcpinmask;
+  SPI1W0 = ILI9341_PASET;
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
 
-  _SPI->writePattern(&buffP[0], 4, 1);
+  GPOS = dcpinmask;
+
+  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+  SPI1W0 = (y0 >> 8) | (y0 << 8);
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
+
+  SPI1W0 = (y1 >> 8) | (y1 << 8);
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
 
   // write to RAM
-  *dcport &= ~dcpinmask;
-  _SPI->write(ILI9341_RAMWR);
+  GPOC = dcpinmask;
+  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+  SPI1W0 = ILI9341_RAMWR;
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
 
-  //CS, HIGH;
-  //*csport |= cspinmask;
-  *dcport |= dcpinmask;
+  GPOS = dcpinmask;
 
   spi_end();
 }
@@ -1198,47 +1272,83 @@ void TFT_ILI9341_ESP::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t 
 ** Function name:           drawPixel
 ** Description:             push a single pixel at an arbitrary position
 ***************************************************************************************/
-void TFT_ILI9341_ESP::drawPixel(uint16_t x, uint16_t y, uint16_t color)
+void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 {
   // Faster range checking, possible because x and y are unsigned
   if ((x >= _width) || (y >= _height)) return;
   spi_begin();
 
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
+
+  const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
 
   // No need to send x if it has not changed (speeds things up)
   if (addr_col != x) {
-    uint8_t buffC[] = { (uint8_t) (x >> 8), (uint8_t) x, (uint8_t) (x >> 8), (uint8_t) x };
 
-    *dcport &= ~dcpinmask;
-    _SPI->write(ILI9341_CASET);
- 
-    *dcport |= dcpinmask;
-    _SPI->writePattern(&buffC[0], 4, 1);
+    GPOC = dcpinmask;
+
+    SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+    SPI1W0 = ILI9341_CASET;
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
+
+    GPOS = dcpinmask;
+
+    SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+    SPI1W0 = (x >> 8) | (x << 8);
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
+
+    // Send same x value again
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
 
     addr_col = x;
   }
 
   // No need to send y if it has not changed (speeds things up)
   if (addr_row != y) {
-    uint8_t buffP[] = { (uint8_t) (y >> 8), (uint8_t) y, (uint8_t) (y >> 8), (uint8_t) y };
 
-    *dcport &= ~dcpinmask;
-    _SPI->write(ILI9341_PASET);
+    GPOC = dcpinmask;
  
-    *dcport |= dcpinmask;
-    _SPI->writePattern(&buffP[0], 4, 1);
+    SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+
+    SPI1W0 = ILI9341_PASET;
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
+    GPOS = dcpinmask;
+
+    SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+    SPI1W0 = (y >> 8) | (y << 8);
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
+
+    // Send same y value again
+    SPI1CMD |= SPIBUSY;
+    while(SPI1CMD & SPIBUSY) {}
 
     addr_row = y;
   }
 
-  *dcport &= ~dcpinmask;
-  _SPI->write(ILI9341_RAMWR);
+  GPOC = dcpinmask;
 
-  *dcport |= dcpinmask;
-  _SPI->write16(color);
+  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
-  *csport |= cspinmask;
+  SPI1W0 = ILI9341_RAMWR;
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
+
+  GPOS = dcpinmask;
+
+  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+  SPI1W0 = (color >> 8) | (color << 8);
+  SPI1CMD |= SPIBUSY;
+  while(SPI1CMD & SPIBUSY) {}
+
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1251,11 +1361,11 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color)
 {
   spi_begin();
 
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
 
   _SPI->write16(color);
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1268,13 +1378,13 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color, uint16_t len)
 {
   spi_begin();
 
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
   while(len>32) { _SPI->writePattern(&colorBin[0], 2, 32); len-=32;}
   _SPI->writePattern(&colorBin[0], 2, len);
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1292,11 +1402,11 @@ void TFT_ILI9341_ESP::pushColors(uint16_t *data, uint8_t len)
 {
   spi_begin();
 
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
 
   while (len--) _SPI->write16(*(data++));
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1312,11 +1422,11 @@ void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint16_t len)
   spi_begin();
   len = len<<1;
 
-  *csport &= ~cspinmask;
+  GPOC = cspinmask;
 
   while (len--) _SPI->write(*(data++));
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1328,8 +1438,8 @@ void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint16_t len)
 
 // Bresenham's algorithm - thx wikipedia - speed enhanced by Bodmer to use
 // an eficient FastH/V Line draw routine for line segments of 2 pixels or more
-
-void TFT_ILI9341_ESP::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color)
+/*
+void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
 {
   boolean steep = abs(y1 - y0) > abs(x1 - x0);
   if (steep) {
@@ -1342,10 +1452,11 @@ void TFT_ILI9341_ESP::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, u
     swap(y0, y1);
   }
 
-  int16_t dx = x1 - x0, dy = abs(y1 - y0);;
+  int32_t dx = x1 - x0, dy = abs(y1 - y0);;
 
 
-  int16_t err = dx >> 1, ystep = -1, xs = x0, dlen = 0;
+  int32_t err = dx >> 1, ystep = -1, xs = x0, dlen = 0;
+
   if (y0 < y1) ystep = 1;
 
   // Split into steep and not steep for FastH/V separation
@@ -1377,12 +1488,117 @@ void TFT_ILI9341_ESP::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, u
     if (dlen) drawFastHLine(xs, y0, dlen, color);
   }
 }
+*/
+
+// This is a weeny bit faster
+void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
+{
+  spi_begin();
+
+  boolean steep = abs(y1 - y0) > abs(x1 - x0);
+
+	if (steep) {
+		swap(x0, y0);
+		swap(x1, y1);
+	}
+
+	if (x0 > x1) {
+		swap(x0, x1);
+		swap(y0, y1);
+	}
+
+	if (x1 < 0) return;
+
+	int16_t dx, dy;
+	dx = x1 - x0;
+	dy = abs(y1 - y0);
+
+	int16_t err = dx / 2;
+	int8_t ystep = (y0 < y1) ? 1 : (-1);
+
+     const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+
+     int16_t swapped_color = (color >> 8) | (color << 8);
+
+	if (steep)	// y increments every iteration (y0 is x-axis, and x0 is y-axis)
+	{
+	  if (x1 >= _height) x1 = _height - 1;
+
+	  for (; x0 <= x1; x0++) {
+		if ((x0 >= 0) && (y0 >= 0) && (y0 < _width)) break;
+		err -= dy;
+		if (err < 0) {
+			err += dx;
+			y0 += ystep;
+		}
+	  }
+
+	  if (x0 > x1) return;
+
+           setAddrWindow(y0, x0, y0, _height);
+           SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+		for (; x0 <= x1; x0++) {
+                while(SPI1CMD & SPIBUSY) {}
+                SPI1W0 = swapped_color;
+                SPI1CMD |= SPIBUSY;
+
+			err -= dy;
+			if (err < 0) {
+				y0 += ystep;
+				if ((y0 < 0) || (y0 >= _width)) break;
+				err += dx;
+				while(SPI1CMD & SPIBUSY) {}
+				setAddrWindow(y0, x0+1, y0, _height);
+				SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+			}
+		}
+	}
+	else	// x increments every iteration (x0 is x-axis, and y0 is y-axis)
+	{
+	  if (x1 >= _width) x1 = _width - 1;
+
+	  for (; x0 <= x1; x0++) {
+		if ((x0 >= 0) && (y0 >= 0) && (y0 < _height)) break;
+		err -= dy;
+		if (err < 0) {
+			err += dx;
+			y0 += ystep;
+		}
+	  }
+
+	  if (x0 > x1) return;
+
+           setAddrWindow(x0, y0, _width, y0);
+           SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+
+		for (; x0 <= x1; x0++) {
+			while(SPI1CMD & SPIBUSY) {}
+			SPI1W0 = swapped_color;
+			SPI1CMD |= SPIBUSY;
+
+			err -= dy;
+			if (err < 0) {
+				y0 += ystep;
+				if ((y0 < 0) || (y0 >= _height)) break;
+				err += dx;
+				while(SPI1CMD & SPIBUSY) {}
+                     setAddrWindow(x0+1, y0, _width, y0);
+				SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+			}
+		}
+	}
+
+     while(SPI1CMD & SPIBUSY) {}
+     GPOS = cspinmask;
+  spi_end();
+}
+
 
 /***************************************************************************************
 ** Function name:           drawFastVLine
 ** Description:             draw a vertical line
 ***************************************************************************************/
-void TFT_ILI9341_ESP::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
+void TFT_ILI9341_ESP::drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color)
 {
   // Rudimentary clipping
   if ((x >= _width) || (y >= _height)) return;
@@ -1392,19 +1608,21 @@ void TFT_ILI9341_ESP::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t co
 
   setAddrWindow(x, y, x, y + h - 1);
 
-  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
+  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color};
   _SPI->writePattern(&colorBin[0], 2, h);
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
+
+//Done! Total = 1028742
 
 /***************************************************************************************
 ** Function name:           drawFastHLine
 ** Description:             draw a horizontal line
 ***************************************************************************************/
-void TFT_ILI9341_ESP::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
+void TFT_ILI9341_ESP::drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color)
 {
   // Rudimentary clipping
   if ((x >= _width) || (y >= _height)) return;
@@ -1414,10 +1632,10 @@ void TFT_ILI9341_ESP::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t co
 
   setAddrWindow(x, y, x + w - 1, y);
 
-  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
+  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color};
   _SPI->writePattern(&colorBin[0], 2, w);
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1426,7 +1644,7 @@ void TFT_ILI9341_ESP::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t co
 ** Function name:           fillRect
 ** Description:             draw a filled rectangle
 ***************************************************************************************/
-void TFT_ILI9341_ESP::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+void TFT_ILI9341_ESP::fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
 {
   // rudimentary clipping (drawChar w/big text requires this)
   if ((x > _width) || (y > _height) || (w==0) || (h==0)) return;
@@ -1436,11 +1654,11 @@ void TFT_ILI9341_ESP::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint1
   spi_begin();
   setAddrWindow(x, y, x + w - 1, y + h - 1);
 
-  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
+  uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color};
   uint32_t n = (uint32_t)w * (uint32_t)h;
   _SPI->writePattern(&colorBin[0], 2, n);
 
-  *csport |= cspinmask;
+  GPOS = cspinmask;
 
   spi_end();
 }
@@ -1794,7 +2012,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
         pY += textsize;
       }
 
-      *csport |= cspinmask;
+      GPOS = cspinmask;
       spi_end();
     }
   }
@@ -1863,7 +2081,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
         }
       }
 
-      *csport |= cspinmask;
+      GPOS = cspinmask;
       spi_end();
     }
     else // Text colour != background && textsize = 1
@@ -1891,7 +2109,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
           _SPI->writePattern(&textbgcolorBin[0], 2, line);
         }
       }
-      *csport |= cspinmask;
+      GPOS = cspinmask;
       spi_end();
     }
   }

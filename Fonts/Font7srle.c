@@ -3,7 +3,7 @@
 // This font has been 8 bit Run Length Encoded to save FLASH space
 //
 // This is a 7 segment font intended to display numbers and time
-// This font only contains characters [space] 0 1 2 3 4 5 6 7 8 9 : .
+// This font only contains characters [space] 0 1 2 3 4 5 6 7 8 9 : . -
 // All other characters print as a space
 
 #include <pgmspace.h>
@@ -12,7 +12,7 @@
 PROGMEM const unsigned char widtbl_f7s[96] =          // character width table
 {
         12, 12, 12, 12, 12, 12, 12, 12,     // char 32 - 39
-        12, 12, 12, 12, 12, 12, 12, 12,     // char 40 - 47
+        12, 12, 12, 12, 12, 17, 12, 12,     // char 40 - 47
         32, 32, 32, 32, 32, 32, 32, 32,     // char 48 - 55
         32, 32, 12, 12, 12, 12, 12, 12,     // char 56 - 63
         12, 12, 12, 12, 12, 12, 12, 12,     // char 64 - 71
@@ -30,6 +30,12 @@ PROGMEM const unsigned char widtbl_f7s[96] =          // character width table
 PROGMEM const unsigned char chr_f7s_20[] = 
 {
 0x7F, 0x7F, 0x7F, 0x7F, 0x3F
+};
+
+PROGMEM const unsigned char chr_f7s_2D[] = 
+{
+0x7F, 0x7F, 0x45, 0x8A, 0x05, 0x8A, 0x05, 0x8A, 
+0x05, 0x8A, 0x7F, 0x7F, 0x7F, 0x2B
 };
 
 PROGMEM const unsigned char chr_f7s_2E[] = 
@@ -246,7 +252,7 @@ PROGMEM const unsigned char chr_f7s_3A[] =
 PROGMEM const unsigned char* const chrtbl_f7s[96] =        // character pointer table
 {
         chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, 
-        chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_2E, chr_f7s_20, 
+        chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_2D, chr_f7s_2E, chr_f7s_20, 
         chr_f7s_30, chr_f7s_31, chr_f7s_32, chr_f7s_33, chr_f7s_34, chr_f7s_35, chr_f7s_36, chr_f7s_37, 
         chr_f7s_38, chr_f7s_39, chr_f7s_3A, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20,
         chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20, chr_f7s_20,

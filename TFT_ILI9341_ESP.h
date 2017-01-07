@@ -334,11 +334,11 @@ class TFT_ILI9341_ESP : public Print {
 
   TFT_ILI9341_ESP(int16_t _W = ILI9341_TFTWIDTH, int16_t _H = ILI9341_TFTHEIGHT);
 
-  void     init(void), begin(void), // Same - begin included for backwards compatibility
+  void     init(void), begin(void); // Same - begin included for backwards compatibility
 
-           drawPixel(uint16_t x, uint16_t y, uint16_t color),
+  void     drawPixel(uint32_t x, uint32_t y, uint32_t color);
 
-           drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t font),
+  void     drawChar(int32_t x, int32_t y, unsigned char c, uint32_t color, uint32_t bg, uint8_t font),
            setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1),
 
            pushColor(uint16_t color),
@@ -347,34 +347,34 @@ class TFT_ILI9341_ESP : public Print {
            pushColors(uint16_t *data, uint8_t len),
            pushColors(uint8_t  *data, uint16_t len),
 
-           fillScreen(uint16_t color),
+           fillScreen(uint32_t color),
 
            writeEnd(void),
            backupSPCR(void),
            restoreSPCR(void),
 
-           drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color),
-           drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color),
-           drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color),
+           drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color),
+           drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color),
+           drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color),
 
-           drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color),
-           fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color),
-           drawRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h, int16_t radius, uint16_t color),
-           fillRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h, int16_t radius, uint16_t color),
+           drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color),
+           fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color),
+           drawRoundRect(int32_t x0, int32_t y0, int32_t w, int32_t h, int32_t radius, uint32_t color),
+           fillRoundRect(int32_t x0, int32_t y0, int32_t w, int32_t h, int32_t radius, uint32_t color),
 
            setRotation(uint8_t r),
            invertDisplay(boolean i),
 
-           drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color),
-           drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, uint16_t color),
-           fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color),
-           fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, int16_t delta, uint16_t color),
+           drawCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color),
+           drawCircleHelper(int32_t x0, int32_t y0, int32_t r, uint8_t cornername, uint32_t color),
+           fillCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color),
+           fillCircleHelper(int32_t x0, int32_t y0, int32_t r, uint8_t cornername, int32_t delta, uint32_t color),
 
            drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uint16_t color),
            fillEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uint16_t color),
 
-           drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color),
-           fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color),
+           drawTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color),
+           fillTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color),
 
            drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color),
 
@@ -418,7 +418,7 @@ class TFT_ILI9341_ESP : public Print {
            textWidth(const char *string, int font),
            fontHeight(int16_t font);
 
-    void   setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
+ inline   void   setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
 
  virtual   size_t write(uint8_t);
 
@@ -427,9 +427,18 @@ class TFT_ILI9341_ESP : public Print {
   uint8_t  tabcolor;
            SPIClass *_SPI;
 
-       void spiWriteBytes(uint8_t * data, uint32_t size, uint32_t repeat=1);
+
 inline void spi_begin() __attribute__((always_inline));
 inline void spi_end() __attribute__((always_inline));
+
+
+
+
+void  writeBytes_(uint8_t * data, uint8_t size);
+inline void setDataBits(uint16_t bits);
+
+
+
 
   boolean  hwSPI;
 
@@ -439,11 +448,15 @@ inline void spi_end() __attribute__((always_inline));
 
   uint8_t  mySPCR, savedSPCR;
 
+  //uint8_t  fifoBuffer[64];
+  uint8_t colorBin[2];
+  uint32_t lastColor = 0xFFFF;
+
  protected:
 
-  int16_t  cursor_x, cursor_y, win_xe, win_ye, padX;
+  int32_t  cursor_x, cursor_y, win_xe, win_ye, padX;
 
-  uint16_t _width, _height, // Display w/h as modified by current rotation
+  uint32_t _width, _height, // Display w/h as modified by current rotation
            textcolor, textbgcolor, fontsloaded, addr_row, addr_col;
 
   uint8_t  glyph_ab,  // glyph height above baseline
