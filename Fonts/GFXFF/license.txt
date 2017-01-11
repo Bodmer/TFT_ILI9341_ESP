@@ -1,9 +1,9 @@
-This TFT_HX8357_Due library has been developed from the Adafruit_GFX library:
+This TFT_ILI9341_ESP library has been developed from the Adafruit_GFX library:
 
 https://github.com/adafruit/Adafruit-GFX-Library
 
 It has been modified extensively to improve rendering speed on
-Due processors.  There follows the original library license text.
+ESP8266 processors.  There follows the original library license text.
 
 
 Original text follows:
