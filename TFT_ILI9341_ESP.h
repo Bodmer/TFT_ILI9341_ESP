@@ -213,6 +213,7 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 #define ILI9341_VMCTR1  0xC5
 #define ILI9341_VMCTR2  0xC7
 
+#define ILI9341_RDINDEX 0xD9
 #define ILI9341_RDID1   0xDA
 #define ILI9341_RDID2   0xDB
 #define ILI9341_RDID3   0xDC
@@ -400,6 +401,10 @@ class TFT_ILI9341_ESP : public Print {
            writedata(uint8_t d),
            commandList(const uint8_t *addr);
 
+  uint8_t  readcommand8(uint8_t cmd_function, uint8_t index);
+  uint16_t  readcommand16(uint8_t cmd_function, uint8_t index);
+  uint32_t  readcommand32(uint8_t cmd_function, uint8_t index);
+
   uint8_t  getRotation(void);
 
   uint16_t fontsLoaded(void),
@@ -418,7 +423,7 @@ class TFT_ILI9341_ESP : public Print {
            textWidth(const char *string, int font),
            fontHeight(int16_t font);
 
- inline   void   setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
+    void   setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
 
  virtual   size_t write(uint8_t);
 

@@ -1,4 +1,4 @@
-//                            USER DEFINED SETTINGS V16
+//                            USER DEFINED SETTINGS
 //            Set fonts to be loaded, pins used and SPI control method
 
 // ##################################################################################
@@ -10,15 +10,19 @@
 // We must use hardware SPI
 // Typical setup for NodeMCU ESP-12 is :
 //
-// Display SDO/MISO to NodeMCU pin D6
-// Display LED      to NodeMCU pin VIN (5V)
-// Display SCK      to NodeMCU pin D5
-// Display SDI/MOSI to NodeMCU pin D7
-// Display DC       to NodeMCU pin D3
-// Display RESET    to NodeMCU pin D4
-// Display CS       to NodeMCU pin D8
-// Display GND      to NodeMCU pin GND (0V)
-// Display VCC      to NodeMCU pin VIN (5V)
+// Display SDO/MISO  to NodeMCU pin D6
+// Display LED       to NodeMCU pin VIN (5V)
+// Display SCK       to NodeMCU pin D5
+// Display SDI/MOSI  to NodeMCU pin D7
+// Display DC (or AO)to NodeMCU pin D3
+// Display RESET     to NodeMCU pin D4
+// Display CS        to NodeMCU pin D8
+// Display GND       to NodeMCU pin GND (0V)
+// Display VCC       to NodeMCU 5V or 3.3V
+//
+// Note: only some versions of the NodeMCU provide the USB 5V on the VIN pin
+// If 5V is not available at a pin you can use 3.3V but backlight brightness
+// will be lower.
 
 // ###### EDIT THE PIN NUMBERS IN THE 3 LINES FOLLOWING TO SUIT YOUR SETUP ######
 
@@ -64,7 +68,7 @@
 // Define the SPI clock frequency (40MHz works OK) 80MHz sometimes fails
 
 // #define SPI_FREQUENCY  20000000
- #define SPI_FREQUENCY  40000000
+ #define SPI_FREQUENCY  40000000 // Maximum to use SPIFFS
 // #define SPI_FREQUENCY  80000000
 
 // Comment out the following #define if "SPI Transactions" do not need to be

@@ -146,6 +146,62 @@ void TFT_ILI9341_ESP::writedata(uint8_t c)
 }
 
 /***************************************************************************************
+** Function name:           readcommand8 (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read a 8 bit data value from an indexed command register
+***************************************************************************************/
+  uint8_t  TFT_ILI9341_ESP::readcommand8(uint8_t cmd_function, uint8_t index)
+{
+  spi_begin();
+  index = 0x10 + (index & 0x0F);
+
+  GPOC = dcpinmask;
+  GPOC = cspinmask;
+  _SPI->transfer(0xD9);
+  GPOS = dcpinmask;
+  _SPI->transfer(index);
+  GPOS = cspinmask;
+
+  GPOC = dcpinmask;
+  GPOC = cspinmask;
+  _SPI->transfer(cmd_function);
+  GPOS = dcpinmask;
+  uint8_t reg = _SPI->transfer(0);
+  GPOS = cspinmask;
+
+  spi_end();
+  return reg;
+}
+
+/***************************************************************************************
+** Function name:           readcommand16 (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read a 16 bit data value from an indexed command register
+***************************************************************************************/
+  uint16_t  TFT_ILI9341_ESP::readcommand16(uint8_t cmd_function, uint8_t index)
+{
+  uint32_t reg;
+  reg |= (readcommand8(cmd_function, index + 2) <<  8);
+  reg |= (readcommand8(cmd_function, index + 3) <<  0);
+
+  return reg;
+}
+
+/***************************************************************************************
+** Function name:           readcommand32 (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read a 32 bit data value from an indexed command register
+***************************************************************************************/
+  uint32_t  TFT_ILI9341_ESP::readcommand32(uint8_t cmd_function, uint8_t index)
+{
+  uint32_t reg;
+
+  reg  = (readcommand8(cmd_function, index + 0) << 24);
+  reg |= (readcommand8(cmd_function, index + 1) << 16);
+  reg |= (readcommand8(cmd_function, index + 2) <<  8);
+  reg |= (readcommand8(cmd_function, index + 3) <<  0);
+
+  return reg;
+}
+
+/***************************************************************************************
 ** Function name:           begin
 ** Description:             Included for backwards compatibility
 ***************************************************************************************/
@@ -190,109 +246,109 @@ void TFT_ILI9341_ESP::init(void)
   writedata(0x80);
   writedata(0x02);
 
-  writecommand(0xCF);  
-  writedata(0x00); 
-  writedata(0XC1); 
-  writedata(0X30); 
+  writecommand(0xCF);
+  writedata(0x00);
+  writedata(0XC1);
+  writedata(0X30);
 
-  writecommand(0xED);  
-  writedata(0x64); 
-  writedata(0x03); 
-  writedata(0X12); 
-  writedata(0X81); 
- 
-  writecommand(0xE8);  
-  writedata(0x85); 
-  writedata(0x00); 
-  writedata(0x78); 
+  writecommand(0xED);
+  writedata(0x64);
+  writedata(0x03);
+  writedata(0X12);
+  writedata(0X81);
 
-  writecommand(0xCB);  
-  writedata(0x39); 
-  writedata(0x2C); 
-  writedata(0x00); 
-  writedata(0x34); 
-  writedata(0x02); 
- 
-  writecommand(0xF7);  
-  writedata(0x20); 
+  writecommand(0xE8);
+  writedata(0x85);
+  writedata(0x00);
+  writedata(0x78);
 
-  writecommand(0xEA);  
-  writedata(0x00); 
-  writedata(0x00); 
- 
-  writecommand(ILI9341_PWCTR1);    //Power control 
-  writedata(0x23);   //VRH[5:0] 
- 
-  writecommand(ILI9341_PWCTR2);    //Power control 
-  writedata(0x10);   //SAP[2:0];BT[3:0] 
- 
-  writecommand(ILI9341_VMCTR1);    //VCM control 
+  writecommand(0xCB);
+  writedata(0x39);
+  writedata(0x2C);
+  writedata(0x00);
+  writedata(0x34);
+  writedata(0x02);
+
+  writecommand(0xF7);
+  writedata(0x20);
+
+  writecommand(0xEA);
+  writedata(0x00);
+  writedata(0x00);
+
+  writecommand(ILI9341_PWCTR1);    //Power control
+  writedata(0x23);   //VRH[5:0]
+
+  writecommand(ILI9341_PWCTR2);    //Power control
+  writedata(0x10);   //SAP[2:0];BT[3:0]
+
+  writecommand(ILI9341_VMCTR1);    //VCM control
   writedata(0x3e);
-  writedata(0x28); 
-  
-  writecommand(ILI9341_VMCTR2);    //VCM control2 
+  writedata(0x28);
+
+  writecommand(ILI9341_VMCTR2);    //VCM control2
   writedata(0x86);  //--
- 
-  writecommand(ILI9341_MADCTL);    // Memory Access Control 
+
+  writecommand(ILI9341_MADCTL);    // Memory Access Control
   writedata(0x48);
 
-  writecommand(ILI9341_PIXFMT);    
-  writedata(0x55); 
-  
-  writecommand(ILI9341_FRMCTR1);    
-  writedata(0x00);  
-  writedata(0x18); 
- 
-  writecommand(ILI9341_DFUNCTR);    // Display Function Control 
-  writedata(0x08); 
-  writedata(0x82);
-  writedata(0x27);  
- 
-  writecommand(0xF2);    // 3Gamma Function Disable 
-  writedata(0x00); 
- 
-  writecommand(ILI9341_GAMMASET);    //Gamma curve selected 
-  writedata(0x01); 
- 
-  writecommand(ILI9341_GMCTRP1);    //Set Gamma 
-  writedata(0x0F); 
-  writedata(0x31); 
-  writedata(0x2B); 
-  writedata(0x0C); 
-  writedata(0x0E); 
-  writedata(0x08); 
-  writedata(0x4E); 
-  writedata(0xF1); 
-  writedata(0x37); 
-  writedata(0x07); 
-  writedata(0x10); 
-  writedata(0x03); 
-  writedata(0x0E); 
-  writedata(0x09); 
-  writedata(0x00); 
-  
-  writecommand(ILI9341_GMCTRN1);    //Set Gamma 
-  writedata(0x00); 
-  writedata(0x0E); 
-  writedata(0x14); 
-  writedata(0x03); 
-  writedata(0x11); 
-  writedata(0x07); 
-  writedata(0x31); 
-  writedata(0xC1); 
-  writedata(0x48); 
-  writedata(0x08); 
-  writedata(0x0F); 
-  writedata(0x0C); 
-  writedata(0x31); 
-  writedata(0x36); 
-  writedata(0x0F); 
+  writecommand(ILI9341_PIXFMT);
+  writedata(0x55);
 
-  writecommand(ILI9341_SLPOUT);    //Exit Sleep 
+  writecommand(ILI9341_FRMCTR1);
+  writedata(0x00);
+  writedata(0x18);
+
+  writecommand(ILI9341_DFUNCTR);    // Display Function Control
+  writedata(0x08);
+  writedata(0x82);
+  writedata(0x27);
+
+  writecommand(0xF2);    // 3Gamma Function Disable
+  writedata(0x00);
+
+  writecommand(ILI9341_GAMMASET);    //Gamma curve selected
+  writedata(0x01);
+
+  writecommand(ILI9341_GMCTRP1);    //Set Gamma
+  writedata(0x0F);
+  writedata(0x31);
+  writedata(0x2B);
+  writedata(0x0C);
+  writedata(0x0E);
+  writedata(0x08);
+  writedata(0x4E);
+  writedata(0xF1);
+  writedata(0x37);
+  writedata(0x07);
+  writedata(0x10);
+  writedata(0x03);
+  writedata(0x0E);
+  writedata(0x09);
+  writedata(0x00);
+
+  writecommand(ILI9341_GMCTRN1);    //Set Gamma
+  writedata(0x00);
+  writedata(0x0E);
+  writedata(0x14);
+  writedata(0x03);
+  writedata(0x11);
+  writedata(0x07);
+  writedata(0x31);
+  writedata(0xC1);
+  writedata(0x48);
+  writedata(0x08);
+  writedata(0x0F);
+  writedata(0x0C);
+  writedata(0x31);
+  writedata(0x36);
+  writedata(0x0F);
+
+  writecommand(ILI9341_SLPOUT);    //Exit Sleep
   spi_end();
-  delay(120); 		
+  delay(120);
   spi_begin();
-  writecommand(ILI9341_DISPON);    //Display on 
+  writecommand(ILI9341_DISPON);    //Display on
   spi_end();
 
 }
@@ -670,7 +726,7 @@ void TFT_ILI9341_ESP::drawTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y
 }
 
 /***************************************************************************************
-** Function name:           fillTriangle 
+** Function name:           fillTriangle
 ** Description:             Draw a filled triangle using 3 arbitrary points
 ***************************************************************************************/
 
@@ -1311,7 +1367,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
   if (addr_row != y) {
 
     GPOC = dcpinmask;
- 
+
     SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
     SPI1W0 = ILI9341_PASET;
@@ -2399,7 +2455,7 @@ int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, 
     ptr++; digits++;         // Increment pointer and digits count
     floatNumber -= temp;     // Remove that digit
   }
-  
+
   // Finally we can plot the string and return pixel length
   return drawString(str, poX, poY, font);
 }
@@ -2416,7 +2472,7 @@ void TFT_ILI9341_ESP::setFreeFont(const GFXfont *f) {
   textfont = 1;
   gfxFont = (GFXfont *)f;
 
-  // Save above baseline (for say H)  and below baseline (for y tail) heights 
+  // Save above baseline (for say H)  and below baseline (for y tail) heights
   uint16_t uniCode = FF_HEIGHT - pgm_read_byte(&gfxFont->first);
   GFXglyph *glyph1  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[uniCode]);
   glyph_ab = -pgm_read_byte(&glyph1->yOffset);
@@ -2510,7 +2566,7 @@ void TFT_ILI9341_ESP::setTextFont(uint8_t f)
 
   Adafruit invests time and resources providing this open source code, please
   support Adafruit & open-source hardware by purchasing products from Adafruit!
- 
+
   Copyright (c) 2013 Adafruit Industries.  All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
