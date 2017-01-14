@@ -435,9 +435,8 @@ class TFT_ILI9341_ESP : public Print {
  private:
 
   uint8_t  tabcolor;
-           SPIClass *_SPI;
-
-
+  
+            SPIClass *_SPI;
 inline void spi_begin() __attribute__((always_inline));
 inline void spi_end() __attribute__((always_inline));
 

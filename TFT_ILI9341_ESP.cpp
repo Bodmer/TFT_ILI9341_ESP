@@ -51,13 +51,15 @@ inline void TFT_ILI9341_ESP::spi_end(void){
 TFT_ILI9341_ESP::TFT_ILI9341_ESP(int16_t w, int16_t h)
 {
 
+  _SPI = &SPI; // Initialise class pointer
+  
   _cs   = TFT_CS;
   _dc   = TFT_DC;
   _rst  = TFT_RST;
 
   hwSPI = true;
   _mosi  = _sclk = 0;
-  //_SPI = SPIdev;
+
 
   if (TFT_RST > 0) {
     digitalWrite(TFT_RST, LOW);
