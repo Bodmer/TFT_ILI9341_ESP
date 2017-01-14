@@ -199,6 +199,10 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 #define ILI9341_VSCRSADD 0x37
 #define ILI9341_PIXFMT  0x3A
 
+#define ILI9341_WRDISBV  0x51
+#define ILI9341_RDDISBV  0x52
+#define ILI9341_WRCTRLD  0x53
+
 #define ILI9341_FRMCTR1 0xB1
 #define ILI9341_FRMCTR2 0xB2
 #define ILI9341_FRMCTR3 0xB3
@@ -213,11 +217,12 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 #define ILI9341_VMCTR1  0xC5
 #define ILI9341_VMCTR2  0xC7
 
+#define ILI9341_RDID4   0xD3
 #define ILI9341_RDINDEX 0xD9
 #define ILI9341_RDID1   0xDA
 #define ILI9341_RDID2   0xDB
 #define ILI9341_RDID3   0xDC
-#define ILI9341_RDID4   0xDD
+#define ILI9341_RDIDX   0xDD // TBC
 
 #define ILI9341_GMCTRP1 0xE0
 #define ILI9341_GMCTRN1 0xE1

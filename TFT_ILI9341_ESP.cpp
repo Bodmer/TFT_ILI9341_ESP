@@ -179,8 +179,8 @@ void TFT_ILI9341_ESP::writedata(uint8_t c)
   uint16_t  TFT_ILI9341_ESP::readcommand16(uint8_t cmd_function, uint8_t index)
 {
   uint32_t reg;
-  reg |= (readcommand8(cmd_function, index + 2) <<  8);
-  reg |= (readcommand8(cmd_function, index + 3) <<  0);
+  reg |= (readcommand8(cmd_function, index + 0) <<  8);
+  reg |= (readcommand8(cmd_function, index + 1) <<  0);
 
   return reg;
 }
