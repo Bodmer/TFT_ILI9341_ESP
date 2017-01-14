@@ -421,8 +421,12 @@ class TFT_ILI9341_ESP : public Print {
 
            drawString(const char *string, int poX, int poY, int font),
            drawCentreString(const char *string, int dX, int poY, int font),
-           drawRightString(const char *string, int dX, int poY, int font);
+           drawRightString(const char *string, int dX, int poY, int font),
 
+		   drawString(const String& string, int poX, int poY, int font),
+           drawCentreString(const String& string, int dX, int poY, int font),
+           drawRightString(const String& string, int dX, int poY, int font);
+		   
   int16_t  height(void),
            width(void),
            textWidth(const char *string, int font),

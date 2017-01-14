@@ -2180,6 +2180,14 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
 ** Function name:           drawString
 ** Description :            draw string with padding if it is defined
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::drawString(const String& string, int poX, int poY, int font)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	drawString(buffer, poX, poY, font);
+}
+
 int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int font)
 {
   int16_t sumX = 0;
@@ -2358,6 +2366,14 @@ return sumX;
 ** Function name:           drawCentreString
 ** Descriptions:            draw string centred on dX
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::drawCentreString(const String& string, int dX, int poY, int font)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	drawCentreString(buffer, dX, poY, font);
+}
+
 int16_t TFT_ILI9341_ESP::drawCentreString(const char *string, int dX, int poY, int font)
 {
   byte tempdatum = textdatum;
@@ -2372,6 +2388,14 @@ int16_t TFT_ILI9341_ESP::drawCentreString(const char *string, int dX, int poY, i
 ** Function name:           drawRightString
 ** Descriptions:            draw string right justified to dX
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::drawRightString(const String& string, int dX, int poY, int font)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	drawRightString(buffer, dX, poY, font);
+}
+
 int16_t TFT_ILI9341_ESP::drawRightString(const char *string, int dX, int poY, int font)
 {
   byte tempdatum = textdatum;
