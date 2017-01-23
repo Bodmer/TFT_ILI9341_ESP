@@ -26,9 +26,15 @@
 
 // ###### EDIT THE PIN NUMBERS IN THE 3 LINES FOLLOWING TO SUIT YOUR SETUP ######
 
+// ModeMCU
 #define TFT_CS   D8  // Chip select control pin
 #define TFT_DC   D3  // Data Command control pin
 #define TFT_RST  D4  // Reset pin (could connect to Arduino RESET pin)
+
+// ESP32 Dev board (planned, not supported yet)
+//#define TFT_CS   5  // Chip select control pin
+//#define TFT_DC   2  // Data Command control pin
+//#define TFT_RST  4  // Reset pin (could connect to Arduino RESET pin)
 
 // ##################################################################################
 //
@@ -71,6 +77,7 @@
  #define SPI_FREQUENCY  40000000 // Maximum to use SPIFFS
 // #define SPI_FREQUENCY  80000000
 
+
 // Comment out the following #define if "SPI Transactions" do not need to be
 // supported. Tranaction support is required if other SPI devices are connected.
 // When commented out the code size will be smaller and sketches will
@@ -78,4 +85,3 @@
 // Transaction support is needed to work with SD library but not needed with TFT_SdFat
 
 // #define SUPPORT_TRANSACTIONS
-

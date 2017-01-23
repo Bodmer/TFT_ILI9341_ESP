@@ -1,6 +1,6 @@
 /***************************************************
-  Arduino TFT graphics library targetted at the UNO
-  and Mega boards.
+  Arduino TFT graphics library targetted at ESP8266
+  based boards. (ESP32 support is planned!)
 
   This library has been derived from the Adafruit_GFX
   library and the associated driver library. See text
@@ -67,11 +67,33 @@
 
 #define USE_FAST_PINIO
 
+#ifdef ESP8266
+  #define CS_L GPOC = cspinmask
+  #define CS_H GPOS = cspinmask
+  #define DC_C GPOC = dcpinmask
+  #define DC_D GPOS = dcpinmask
+#endif
+
+#ifdef ESP32
+  #define CS_L digitalWrite(TFT_CS, LOW)
+  #define CS_H digitalWrite(TFT_CS, HIGH)
+  #define DC_C digitalWrite(TFT_DC, LOW)
+  #define DC_D digitalWrite(TFT_DC, HIGH)
+#endif
+
 // We can include all the free fonts and they will only be built into
 // the sketch if they are used
 
 #include <Fonts/GFXFF/gfxfont.h>
 
+// New custom fonts
+#include <Fonts/Custom/Orbitron_Light_24.h>    // CF_OL24
+#include <Fonts/Custom/Orbitron_Light_32.h>    // CF_OL32
+#include <Fonts/Custom/Roboto_Thin_24.h>      // CF_RT24
+#include <Fonts/Custom/Satisfy_24.h>     // CF_S24
+#include <Fonts/Custom/Yellowtail_32.h>  // CF_Y32
+
+// Free fonts
 #include <Fonts/GFXFF/TomThumb.h>  // TT1
 
 #include <Fonts/GFXFF/FreeMono9pt7b.h>  // FF1 or FM9
@@ -351,7 +373,7 @@ class TFT_ILI9341_ESP : public Print {
            pushColor(uint16_t color, uint16_t len),
 
            pushColors(uint16_t *data, uint8_t len),
-           pushColors(uint8_t  *data, uint16_t len),
+           pushColors(uint8_t  *data, uint32_t len),
 
            fillScreen(uint32_t color),
 

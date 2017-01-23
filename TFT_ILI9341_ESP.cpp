@@ -1,6 +1,6 @@
 /***************************************************
   Arduino TFT graphics library targetted at ESP8266
-  based boards.
+  based boards. (ESP32 support is planned!)
 
   This library has been derived from the Adafruit_GFX
   library and the associated driver library. See text
@@ -13,6 +13,7 @@
   The larger fonts are Run Length Encoded to reduce their
   size.
 
+  Created by Bodmer 2/12/16
  ****************************************************/
 
 #include "TFT_ILI9341_ESP.h"
@@ -129,11 +130,11 @@ void TFT_ILI9341_ESP::spiwrite(uint8_t c)
 ***************************************************************************************/
 void TFT_ILI9341_ESP::writecommand(uint8_t c)
 {
-  GPOC = dcpinmask;
-  GPOC = cspinmask;
+  DC_C;
+  CS_L;
   _SPI->transfer(c);
-  GPOS = cspinmask;
-  GPOS = dcpinmask;
+  CS_H;
+  DC_D;
 }
 
 /***************************************************************************************
@@ -142,9 +143,9 @@ void TFT_ILI9341_ESP::writecommand(uint8_t c)
 ***************************************************************************************/
 void TFT_ILI9341_ESP::writedata(uint8_t c)
 {
-  GPOC = cspinmask;
+  CS_L;
   _SPI->transfer(c);
-  GPOS = cspinmask;
+  CS_H;
 }
 
 /***************************************************************************************
@@ -156,19 +157,19 @@ void TFT_ILI9341_ESP::writedata(uint8_t c)
   spi_begin();
   index = 0x10 + (index & 0x0F);
 
-  GPOC = dcpinmask;
-  GPOC = cspinmask;
+  DC_C;
+  CS_L;
   _SPI->transfer(0xD9);
-  GPOS = dcpinmask;
+  DC_D;
   _SPI->transfer(index);
-  GPOS = cspinmask;
+  CS_H;
 
-  GPOC = dcpinmask;
-  GPOC = cspinmask;
+  DC_C;
+  CS_L;
   _SPI->transfer(cmd_function);
-  GPOS = dcpinmask;
+  DC_D;
   uint8_t reg = _SPI->transfer(0);
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
   return reg;
@@ -956,6 +957,7 @@ int16_t TFT_ILI9341_ESP::textWidth(const char *string, int font)
       while (*string)
       {
         uniCode = *(string++);
+		if (uniCode > (uint8_t)pgm_read_byte(&gfxFont->last)) uniCode = pgm_read_byte(&gfxFont->first);
         uniCode -= pgm_read_byte(&gfxFont->first);
         GFXglyph *glyph  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[uniCode]);
         // If this is not the  last character then use xAdvance
@@ -1051,7 +1053,7 @@ spi_begin();
       //_SPI->transfer(bg >> 8);
       _SPI->write16(bg);
     }
-    GPOS = cspinmask;
+    CS_H;
   }
   else
   {
@@ -1091,7 +1093,7 @@ spi_begin();
     // Character is assumed previously filtered by write() to eliminate
     // newlines, returns, non-printable characters, etc.  Calling drawChar()
     // directly with 'bad' characters of font may cause mayhem!
-
+    if (c > pgm_read_byte(&gfxFont->last)) c = pgm_read_byte(&gfxFont->first);;
     c -= pgm_read_byte(&gfxFont->first);
     GFXglyph *glyph  = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c]);
     uint8_t  *bitmap = (uint8_t *)pgm_read_dword(&gfxFont->bitmap);
@@ -1251,7 +1253,7 @@ void TFT_ILI9341_ESP::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
   spi_begin();
   setAddrWindow(x0, y0, x1, y1);
-  GPOS = cspinmask;
+  CS_H;
   spi_end();
 }
 
@@ -1261,6 +1263,7 @@ void TFT_ILI9341_ESP::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 ***************************************************************************************/
 // Chip select stays low, use setWindow() from sketches
 
+#ifdef ESP8266
 inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
   spi_begin();
@@ -1269,8 +1272,8 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   addr_row = 0xFFFF;
 
   // Column addr set
-  GPOC = dcpinmask;
-  GPOC = cspinmask;
+  DC_C;
+  CS_L;
 
   const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
 
@@ -1280,7 +1283,7 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  GPOS = dcpinmask;
+  DC_D;
 
   SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
 
@@ -1293,7 +1296,7 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   while(SPI1CMD & SPIBUSY) {}
 
   // Row addr set
-  GPOC = dcpinmask;
+  DC_C;
 
   SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
@@ -1301,7 +1304,7 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  GPOS = dcpinmask;
+  DC_D;
 
   SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
 
@@ -1314,43 +1317,86 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   while(SPI1CMD & SPIBUSY) {}
 
   // write to RAM
-  GPOC = dcpinmask;
+  DC_C;
   SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
   SPI1W0 = ILI9341_RAMWR;
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  GPOS = dcpinmask;
+  DC_D;
+
+  spi_end();
+}
+#else
+
+inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+  spi_begin();
+
+  addr_col = 0xFFFF;
+  addr_row = 0xFFFF;
+
+  // Column addr set
+  DC_C;
+  CS_L;
+
+  _SPI->write(ILI9341_CASET);
+
+  DC_D;
+
+  _SPI->write16((x0 >> 8) | (x0 << 8));
+
+  _SPI->write16((x1 >> 8) | (x1 << 8));
+
+  // Row addr set
+  DC_C;
+
+  _SPI->write(ILI9341_PASET);
+
+  DC_D;
+
+  _SPI->write16((y0 >> 8) | (y0 << 8));
+
+  _SPI->write16((y1 >> 8) | (y1 << 8));
+
+  // write to RAM
+  DC_C;
+
+  _SPI->write(ILI9341_RAMWR);
+
+  DC_D;
 
   spi_end();
 }
 
+#endif
 
 /***************************************************************************************
 ** Function name:           drawPixel
 ** Description:             push a single pixel at an arbitrary position
 ***************************************************************************************/
+#ifdef ESP8266
 void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 {
   // Faster range checking, possible because x and y are unsigned
   if ((x >= _width) || (y >= _height)) return;
   spi_begin();
 
-  GPOC = cspinmask;
+  CS_L;
 
   const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
 
   // No need to send x if it has not changed (speeds things up)
   if (addr_col != x) {
 
-    GPOC = dcpinmask;
+    DC_C;
 
     SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
     SPI1W0 = ILI9341_CASET;
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
-    GPOS = dcpinmask;
+    DC_D;
 
     SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
 
@@ -1368,14 +1414,14 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
   // No need to send y if it has not changed (speeds things up)
   if (addr_row != y) {
 
-    GPOC = dcpinmask;
+    DC_C;
 
     SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
     SPI1W0 = ILI9341_PASET;
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
-    GPOS = dcpinmask;
+    DC_D;
 
     SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
 
@@ -1390,7 +1436,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
     addr_row = y;
   }
 
-  GPOC = dcpinmask;
+  DC_C;
 
   SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
 
@@ -1398,7 +1444,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  GPOS = dcpinmask;
+  DC_D;
 
   SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
 
@@ -1406,11 +1452,69 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
 
+#else
+
+	void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
+{
+  // Faster range checking, possible because x and y are unsigned
+  if ((x >= _width) || (y >= _height)) return;
+  spi_begin();
+
+  CS_L;
+
+  // No need to send x if it has not changed (speeds things up)
+  if (addr_col != x) {
+
+    DC_C;
+
+    _SPI->write(ILI9341_CASET);
+
+    DC_D;
+
+    _SPI->write16((x >> 8) | (x << 8));
+
+    // Send same x value again
+    _SPI->write16((x >> 8) | (x << 8));
+
+    addr_col = x;
+  }
+
+  // No need to send y if it has not changed (speeds things up)
+  if (addr_row != y) {
+
+    DC_C;
+
+    _SPI->write(ILI9341_PASET);
+
+    DC_D;
+
+    _SPI->write16((y >> 8) | (y << 8));
+
+    // Send same y value again
+    _SPI->write16((y >> 8) | (y << 8));
+
+    addr_row = y;
+  }
+
+  DC_C;
+
+  _SPI->write(ILI9341_RAMWR);
+
+  DC_D;
+
+  _SPI->write16((color >> 8) | (color << 8));
+
+  CS_H;
+
+  spi_end();
+}
+
+#endif
 /***************************************************************************************
 ** Function name:           pushColor
 ** Description:             push a single pixel
@@ -1419,11 +1523,11 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color)
 {
   spi_begin();
 
-  GPOC = cspinmask;
+  CS_L;
 
   _SPI->write16(color);
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1436,13 +1540,13 @@ void TFT_ILI9341_ESP::pushColor(uint16_t color, uint16_t len)
 {
   spi_begin();
 
-  GPOC = cspinmask;
+  CS_L;
 
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color };
   while(len>32) { _SPI->writePattern(&colorBin[0], 2, 32); len-=32;}
   _SPI->writePattern(&colorBin[0], 2, len);
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1460,11 +1564,11 @@ void TFT_ILI9341_ESP::pushColors(uint16_t *data, uint8_t len)
 {
   spi_begin();
 
-  GPOC = cspinmask;
+  CS_L;
 
   while (len--) _SPI->write16(*(data++));
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1475,16 +1579,16 @@ void TFT_ILI9341_ESP::pushColors(uint16_t *data, uint8_t len)
 ***************************************************************************************/
 // Assumed that setWindow() has previously been called
 
-void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint16_t len)
+void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint32_t len)
 {
   spi_begin();
-  len = len<<1;
 
-  GPOC = cspinmask;
+  CS_L;
 
-  while (len--) _SPI->write(*(data++));
+      while ( len >=64 ) {_SPI->writePattern(data, 64, 1); data += 64; len -= 64; }
+      if (len) _SPI->writePattern(data, len, 1);
 
-  GPOS = cspinmask;
+	  CS_H;
 
   spi_end();
 }
@@ -1496,7 +1600,8 @@ void TFT_ILI9341_ESP::pushColors(uint8_t *data, uint16_t len)
 
 // Bresenham's algorithm - thx wikipedia - speed enhanced by Bodmer to use
 // an eficient FastH/V Line draw routine for line segments of 2 pixels or more
-/*
+#ifdef ESP32
+
 void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
 {
   boolean steep = abs(y1 - y0) > abs(x1 - x0);
@@ -1546,7 +1651,8 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
     if (dlen) drawFastHLine(xs, y0, dlen, color);
   }
 }
-*/
+
+#else
 
 // This is a weeny bit faster
 void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
@@ -1574,9 +1680,9 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 	int16_t err = dx / 2;
 	int8_t ystep = (y0 < y1) ? 1 : (-1);
 
-     const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+    const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
 
-     int16_t swapped_color = (color >> 8) | (color << 8);
+    int16_t swapped_color = (color >> 8) | (color << 8);
 
 	if (steep)	// y increments every iteration (y0 is x-axis, and x0 is y-axis)
 	{
@@ -1647,10 +1753,10 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 	}
 
      while(SPI1CMD & SPIBUSY) {}
-     GPOS = cspinmask;
+     CS_H;
   spi_end();
 }
-
+#endif
 
 /***************************************************************************************
 ** Function name:           drawFastVLine
@@ -1669,7 +1775,7 @@ void TFT_ILI9341_ESP::drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t co
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color};
   _SPI->writePattern(&colorBin[0], 2, h);
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1693,7 +1799,7 @@ void TFT_ILI9341_ESP::drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t co
   uint8_t colorBin[] = { (uint8_t) (color >> 8), (uint8_t) color};
   _SPI->writePattern(&colorBin[0], 2, w);
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1716,7 +1822,7 @@ void TFT_ILI9341_ESP::fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint3
   uint32_t n = (uint32_t)w * (uint32_t)h;
   _SPI->writePattern(&colorBin[0], 2, n);
 
-  GPOS = cspinmask;
+  CS_H;
 
   spi_end();
 }
@@ -1892,8 +1998,9 @@ size_t TFT_ILI9341_ESP::write(uint8_t utf8)
       cursor_y += (int16_t)textsize *
                   (uint8_t)pgm_read_byte(&gfxFont->yAdvance);
     } else if(uniCode != '\r') {
-      uint8_t first = pgm_read_byte(&gfxFont->first);
-      if((uniCode >= first) && (uniCode <= (uint8_t)pgm_read_byte(&gfxFont->last))) {
+	  if (uniCode > (uint8_t)pgm_read_byte(&gfxFont->last)) uniCode = pgm_read_byte(&gfxFont->first);
+
+      if(uniCode >= pgm_read_byte(&gfxFont->first)) {
         uint8_t   c2    = uniCode - pgm_read_byte(&gfxFont->first);
         GFXglyph *glyph = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c2]);
         uint8_t   w     = pgm_read_byte(&glyph->width),
@@ -1950,8 +2057,9 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
       }
       else
       {
-        uint8_t first = pgm_read_byte(&gfxFont->first);
-        if((uniCode >= first) && (uniCode <= (uint8_t)pgm_read_byte(&gfxFont->last)))
+		if (uniCode > pgm_read_byte(&gfxFont->last)) uniCode = pgm_read_byte(&gfxFont->first);
+
+        if(uniCode >= pgm_read_byte(&gfxFont->first))
         {
           uint8_t   c2    = uniCode - pgm_read_byte(&gfxFont->first);
           GFXglyph *glyph = &(((GFXglyph *)pgm_read_dword(&gfxFont->glyph))[c2]);
@@ -2070,7 +2178,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
         pY += textsize;
       }
 
-      GPOS = cspinmask;
+      CS_H;
       spi_end();
     }
   }
@@ -2139,7 +2247,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
         }
       }
 
-      GPOS = cspinmask;
+      CS_H;
       spi_end();
     }
     else // Text colour != background && textsize = 1
@@ -2167,7 +2275,7 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
           _SPI->writePattern(&textbgcolorBin[0], 2, line);
         }
       }
-      GPOS = cspinmask;
+      CS_H;
       spi_end();
     }
   }
