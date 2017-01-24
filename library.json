@@ -1,0 +1,25 @@
+{
+  "name": "TFT_ILI9341_ESP",
+  "version": "0.14.0",
+  "keywords": "ILI9341, ESP8266, TFT",
+  "description": "A TFT ILI9341 SPI graphics library for ESP8266",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/Bodmer/TFT_ILI9341_ESP"
+  },
+  "authors":
+  [
+    {
+        "name": "Bodmer",
+        "email": "bodmer@anola.net",
+        "maintainer": true
+    },
+    {
+        "name": "Adafruit",
+        "url": "https://www.adafruit.com/"
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "espressif8266"
+}
