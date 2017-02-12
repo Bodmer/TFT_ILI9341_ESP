@@ -7,19 +7,22 @@
 //
 // ##################################################################################
 
-// We must use hardware SPI
+// We must use hardware SPI, a minimum of 3 GPIO pins is needed.
 // Typical setup for NodeMCU ESP-12 is :
 //
-// Display SDO/MISO  to NodeMCU pin D6
-// Display LED       to NodeMCU pin VIN (5V)
+// Display SDO/MISO  to NodeMCU pin D6 (or leave disconnected if not reading TFT)
+// Display LED       to NodeMCU pin VIN (or 5V, see below)
 // Display SCK       to NodeMCU pin D5
 // Display SDI/MOSI  to NodeMCU pin D7
 // Display DC (or AO)to NodeMCU pin D3
-// Display RESET     to NodeMCU pin D4
-// Display CS        to NodeMCU pin D8
+// Display RESET     to NodeMCU pin D4 (or RST, see below)
+// Display CS        to NodeMCU pin D8 (or GND, see below)
 // Display GND       to NodeMCU pin GND (0V)
 // Display VCC       to NodeMCU 5V or 3.3V
 //
+// The TFT RESET pin can be connected to the NodeMCU RST pin or 3.3V to free up a control pin
+// The TFT CS pin can be connected to GND if no more SPI deivces such as the SD Card are connected
+// The NodeMCU D0 pin can be used for RST but not for DC or CS (to be investigated)
 // Note: only some versions of the NodeMCU provide the USB 5V on the VIN pin
 // If 5V is not available at a pin you can use 3.3V but backlight brightness
 // will be lower.
@@ -27,14 +30,16 @@
 // ###### EDIT THE PIN NUMBERS IN THE 3 LINES FOLLOWING TO SUIT YOUR SETUP ######
 
 // ModeMCU
-#define TFT_CS   D8  // Chip select control pin
+#define TFT_CS   D8  // Chip select control pin D8
 #define TFT_DC   D3  // Data Command control pin
-#define TFT_RST  D4  // Reset pin (could connect to Arduino RESET pin)
+#define TFT_RST  D4  // Reset pin (could connect to NodeMCU RST, see next line)
+//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to NodeMCU RST or 3.3V
 
 // ESP32 Dev board (planned, not supported yet)
 //#define TFT_CS   5  // Chip select control pin
 //#define TFT_DC   2  // Data Command control pin
 //#define TFT_RST  4  // Reset pin (could connect to Arduino RESET pin)
+//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to NodeMCU RST
 
 // ##################################################################################
 //

@@ -62,7 +62,7 @@ TFT_ILI9341_ESP::TFT_ILI9341_ESP(int16_t w, int16_t h)
   _mosi  = _sclk = 0;
 
 
-  if (TFT_RST > 0) {
+  if (TFT_RST >= 0) {
     digitalWrite(TFT_RST, LOW);
     pinMode(TFT_RST, OUTPUT);
   }
@@ -224,7 +224,7 @@ void TFT_ILI9341_ESP::init(void)
   dcport    = portOutputRegister(digitalPinToPort(_dc));
   dcpinmask = (uint32_t) digitalPinToBitMask(_dc);
 
-  _SPI->begin();
+  _SPI->begin(); // This will set MISO to input
 
 #ifndef SUPPORT_TRANSACTIONS
   _SPI->setBitOrder(MSBFIRST);
@@ -232,8 +232,10 @@ void TFT_ILI9341_ESP::init(void)
   _SPI->setFrequency(SPI_FREQUENCY);
 #endif
 
+  // SPI1U1 |= SPIUSIO; // Single I/O pin on MOSI (bi-directional) - not tested
+ 
   // toggle RST low to reset
-  if (TFT_RST > 0) {
+  if (TFT_RST >= 0) {
     digitalWrite(TFT_RST, HIGH);
     delay(5);
     digitalWrite(TFT_RST, LOW);
@@ -244,6 +246,13 @@ void TFT_ILI9341_ESP::init(void)
 
 
   spi_begin();
+  writecommand(0x01); // Software reset
+  spi_end();
+  
+  delay(5); // Wait for software reset to complete
+
+  spi_begin();
+  
   writecommand(0xEF);
   writedata(0x03);
   writedata(0x80);
@@ -931,6 +940,27 @@ int16_t TFT_ILI9341_ESP::height(void)
 ** Function name:           textWidth
 ** Description:             Return the width in pixels of a string in a given font
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::textWidth(const String& string)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	return textWidth(buffer, textfont);
+}
+
+int16_t TFT_ILI9341_ESP::textWidth(const String& string, int font)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	return textWidth(buffer, font);
+}
+
+int16_t TFT_ILI9341_ESP::textWidth(const char *string)
+{
+	return textWidth(string, textfont);
+}
+
 int16_t TFT_ILI9341_ESP::textWidth(const char *string, int font)
 {
   unsigned int str_width  = 0;
@@ -1244,8 +1274,8 @@ spi_end();
 }
 
 /***************************************************************************************
-** Function name:           setAddrWindow
-** Description:             define an area to rexeive a stream of pixels
+** Function name:           setWindow
+** Description:             define an area to receive a stream of pixels
 ***************************************************************************************/
 // Chip select is high at the end of this function
 
@@ -2030,6 +2060,11 @@ size_t TFT_ILI9341_ESP::write(uint8_t utf8)
 ** Function name:           drawChar
 ** Description:             draw a unicode onto the screen
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y)
+{
+	return drawChar(uniCode, x, y, textfont);
+}
+
 int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
 {
 
@@ -2285,17 +2320,32 @@ int16_t TFT_ILI9341_ESP::drawChar(unsigned int uniCode, int x, int y, int font)
 }
 
 /***************************************************************************************
-** Function name:           drawString
+** Function name:           drawString (with or without user defined font)
 ** Description :            draw string with padding if it is defined
 ***************************************************************************************/
+// Without font number, uses font set by setTextFont()
+int16_t TFT_ILI9341_ESP::drawString(const String& string, int poX, int poY)
+{
+	int16_t len = string.length() + 2;
+	char buffer[len];
+	string.toCharArray(buffer, len);
+	return drawString(buffer, poX, poY, textfont);
+}
+// With font number
 int16_t TFT_ILI9341_ESP::drawString(const String& string, int poX, int poY, int font)
 {
 	int16_t len = string.length() + 2;
 	char buffer[len];
 	string.toCharArray(buffer, len);
-	drawString(buffer, poX, poY, font);
+	return drawString(buffer, poX, poY, font);
 }
 
+// Without font number, uses font set by setTextFont()
+int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY)
+{
+	return drawString(string, poX, poY, textfont);
+}
+// With font number
 int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int font)
 {
   int16_t sumX = 0;
@@ -2469,7 +2519,7 @@ return sumX;
 }
 
 /***************************************************************************************
-** Function name:           drawCentreString
+** Function name:           drawCentreString (deprecated, use setTextDatum())
 ** Descriptions:            draw string centred on dX
 ***************************************************************************************/
 int16_t TFT_ILI9341_ESP::drawCentreString(const String& string, int dX, int poY, int font)
@@ -2477,7 +2527,7 @@ int16_t TFT_ILI9341_ESP::drawCentreString(const String& string, int dX, int poY,
 	int16_t len = string.length() + 2;
 	char buffer[len];
 	string.toCharArray(buffer, len);
-	drawCentreString(buffer, dX, poY, font);
+	return drawCentreString(buffer, dX, poY, font);
 }
 
 int16_t TFT_ILI9341_ESP::drawCentreString(const char *string, int dX, int poY, int font)
@@ -2491,7 +2541,7 @@ int16_t TFT_ILI9341_ESP::drawCentreString(const char *string, int dX, int poY, i
 }
 
 /***************************************************************************************
-** Function name:           drawRightString
+** Function name:           drawRightString (deprecated, use setTextDatum())
 ** Descriptions:            draw string right justified to dX
 ***************************************************************************************/
 int16_t TFT_ILI9341_ESP::drawRightString(const String& string, int dX, int poY, int font)
@@ -2499,7 +2549,7 @@ int16_t TFT_ILI9341_ESP::drawRightString(const String& string, int dX, int poY, 
 	int16_t len = string.length() + 2;
 	char buffer[len];
 	string.toCharArray(buffer, len);
-	drawRightString(buffer, dX, poY, font);
+	return drawRightString(buffer, dX, poY, font);
 }
 
 int16_t TFT_ILI9341_ESP::drawRightString(const char *string, int dX, int poY, int font)
@@ -2516,6 +2566,13 @@ int16_t TFT_ILI9341_ESP::drawRightString(const char *string, int dX, int poY, in
 ** Function name:           drawNumber
 ** Description:             draw a long integer
 ***************************************************************************************/
+int16_t TFT_ILI9341_ESP::drawNumber(long long_num, int poX, int poY)
+{
+  char str[12];
+  ltoa(long_num, str, 10);
+  return drawString(str, poX, poY, textfont);
+}
+
 int16_t TFT_ILI9341_ESP::drawNumber(long long_num, int poX, int poY, int font)
 {
   char str[12];
@@ -2529,6 +2586,11 @@ int16_t TFT_ILI9341_ESP::drawNumber(long long_num, int poX, int poY, int font)
 ***************************************************************************************/
 // Assemble and print a string, this permits alignment relative to a datum
 // looks complicated but much more compact and actually faster than using print class
+int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY)
+{
+	return drawFloat(floatNumber, dp, poX, poY, textfont);
+}
+
 int16_t TFT_ILI9341_ESP::drawFloat(float floatNumber, int dp, int poX, int poY, int font)
 {
   char str[14];               // Array to contain decimal string

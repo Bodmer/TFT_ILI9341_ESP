@@ -1,6 +1,6 @@
 {
   "name": "TFT_ILI9341_ESP",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "keywords": "ILI9341, ESP8266, TFT",
   "description": "A TFT ILI9341 SPI graphics library for ESP8266",
   "repository":

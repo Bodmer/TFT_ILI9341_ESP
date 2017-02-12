@@ -429,8 +429,8 @@ class TFT_ILI9341_ESP : public Print {
            commandList(const uint8_t *addr);
 
   uint8_t  readcommand8(uint8_t cmd_function, uint8_t index);
-  uint16_t  readcommand16(uint8_t cmd_function, uint8_t index);
-  uint32_t  readcommand32(uint8_t cmd_function, uint8_t index);
+  uint16_t readcommand16(uint8_t cmd_function, uint8_t index);
+  uint32_t readcommand32(uint8_t cmd_function, uint8_t index);
 
   uint8_t  getRotation(void);
 
@@ -438,20 +438,30 @@ class TFT_ILI9341_ESP : public Print {
            color565(uint8_t r, uint8_t g, uint8_t b);
 
   int16_t  drawChar(unsigned int uniCode, int x, int y, int font),
+		   drawChar(unsigned int uniCode, int x, int y),
            drawNumber(long long_num,int poX, int poY, int font),
+		   drawNumber(long long_num,int poX, int poY),
            drawFloat(float floatNumber,int decimal,int poX, int poY, int font),
-
+           drawFloat(float floatNumber,int decimal,int poX, int poY),
+		   
+		   // Handle char arrays
            drawString(const char *string, int poX, int poY, int font),
-           drawCentreString(const char *string, int dX, int poY, int font),
-           drawRightString(const char *string, int dX, int poY, int font),
+           drawString(const char *string, int poX, int poY),
+           drawCentreString(const char *string, int dX, int poY, int font), // Deprecated, use setTextDatum() and drawString()
+           drawRightString(const char *string, int dX, int poY, int font),  // Deprecated, use setTextDatum() and drawString()
 
+		   // Handle String type
 		   drawString(const String& string, int poX, int poY, int font),
-           drawCentreString(const String& string, int dX, int poY, int font),
-           drawRightString(const String& string, int dX, int poY, int font);
+		   drawString(const String& string, int poX, int poY),
+           drawCentreString(const String& string, int dX, int poY, int font), // Deprecated, use setTextDatum() and drawString()
+           drawRightString(const String& string, int dX, int poY, int font);  // Deprecated, use setTextDatum() and drawString()
 		   
   int16_t  height(void),
            width(void),
            textWidth(const char *string, int font),
+		   textWidth(const char *string),
+		   textWidth(const String& string, int font),
+		   textWidth(const String& string),
            fontHeight(int16_t font);
 
     void   setAddrWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
