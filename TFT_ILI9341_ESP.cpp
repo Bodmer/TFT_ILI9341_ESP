@@ -2300,7 +2300,7 @@ int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int fo
 {
   int16_t sumX = 0;
   uint8_t padding = 1, baseline = 0;
-  uint16_t cwidth = 0;
+  uint16_t cwidth = textWidth(string, font); // Find the pixel width of the string in the font
   uint16_t cheight = 0;
 
 #ifdef LOAD_GFXFF
@@ -2321,8 +2321,6 @@ int16_t TFT_ILI9341_ESP::drawString(const char *string, int poX, int poY, int fo
 
   if (textdatum || padX)
   {
-    // Find the pixel width of the string in the font
-    cwidth  = textWidth(string, font);
 
     // If it is not font 1 (GLCD or free font) get the basline and pixel height of the font
     if (font!=1) {
