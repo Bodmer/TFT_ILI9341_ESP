@@ -67,18 +67,20 @@
 
 #define USE_FAST_PINIO
 
-#ifdef ESP8266
-  #define CS_L GPOC = cspinmask
-  #define CS_H GPOS = cspinmask
+#if defined (ESP8266) && defined (D0_USED_FOR_DC)
+  #define DC_C digitalWrite(TFT_DC, LOW)
+  #define DC_D digitalWrite(TFT_DC, HIGH)
+#else
   #define DC_C GPOC = dcpinmask
   #define DC_D GPOS = dcpinmask
 #endif
 
-#ifdef ESP32
+#if defined (ESP8266) && defined (D0_USED_FOR_CS)
   #define CS_L digitalWrite(TFT_CS, LOW)
   #define CS_H digitalWrite(TFT_CS, HIGH)
-  #define DC_C digitalWrite(TFT_DC, LOW)
-  #define DC_D digitalWrite(TFT_DC, HIGH)
+#else
+  #define CS_L GPOC = cspinmask
+  #define CS_H GPOS = cspinmask
 #endif
 
 // We can include all the free fonts and they will only be built into
@@ -87,11 +89,11 @@
 #include <Fonts/GFXFF/gfxfont.h>
 
 // New custom fonts
-#include <Fonts/Custom/Orbitron_Light_24.h>    // CF_OL24
-#include <Fonts/Custom/Orbitron_Light_32.h>    // CF_OL32
-#include <Fonts/Custom/Roboto_Thin_24.h>      // CF_RT24
-#include <Fonts/Custom/Satisfy_24.h>     // CF_S24
-#include <Fonts/Custom/Yellowtail_32.h>  // CF_Y32
+#include <Fonts/Custom/Orbitron_Light_24.h> // CF_OL24
+#include <Fonts/Custom/Orbitron_Light_32.h> // CF_OL32
+#include <Fonts/Custom/Roboto_Thin_24.h>    // CF_RT24
+#include <Fonts/Custom/Satisfy_24.h>        // CF_S24
+#include <Fonts/Custom/Yellowtail_32.h>     // CF_Y32
 
 // Free fonts
 #include <Fonts/GFXFF/TomThumb.h>  // TT1
@@ -432,6 +434,15 @@ class TFT_ILI9341_ESP : public Print {
   uint16_t readcommand16(uint8_t cmd_function, uint8_t index);
   uint32_t readcommand32(uint8_t cmd_function, uint8_t index);
 
+  uint16_t readPixel(int32_t x0, int32_t y0); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY - WORD ALIGNMENT ISSUE?
+
+           // These are can be used as a pair to duplicate or move blocks/lines, sometime they work, othertimes the TFT gets into an odd mode   
+  void     readRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
+  void     pushRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
+
+			// This next function has been used successfully to dump the TFT screen to a PC for documentation purposes
+  void     readRectRGB(int32_t x0, int32_t y0, int32_t w, int32_t h, uint8_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
+
   uint8_t  getRotation(void);
 
   uint16_t fontsLoaded(void),
@@ -494,7 +505,7 @@ inline void setDataBits(uint16_t bits);
   uint8_t  mySPCR, savedSPCR;
 
   //uint8_t  fifoBuffer[64];
-  uint8_t colorBin[2];
+  uint8_t  colorBin[2];
   uint32_t lastColor = 0xFFFF;
 
  protected:

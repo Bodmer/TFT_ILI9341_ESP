@@ -3,7 +3,7 @@
 
 // ##################################################################################
 //
-// Define the pins that are used to interface with the display here
+// Section 1. Define the pins that are used to interface with the display here
 //
 // ##################################################################################
 
@@ -21,8 +21,9 @@
 // Display VCC       to NodeMCU 5V or 3.3V
 //
 // The TFT RESET pin can be connected to the NodeMCU RST pin or 3.3V to free up a control pin
-// The TFT CS pin can be connected to GND if no more SPI deivces such as the SD Card are connected
-// The NodeMCU D0 pin can be used for RST but not for DC or CS (to be investigated)
+// The TFT CS pin can be connected to GND if no more SPI deivces (e.g. an SD Card) are connected
+// The NodeMCU D0 pin can be used for RST but see  2. below if DC or CS is connected to D0
+//
 // Note: only some versions of the NodeMCU provide the USB 5V on the VIN pin
 // If 5V is not available at a pin you can use 3.3V but backlight brightness
 // will be lower.
@@ -43,13 +44,28 @@
 
 // ##################################################################################
 //
-// Define the fonts that are to be used here
+// Section 2. Define the way the DC and/or CS lines are driven
+//
+// ##################################################################################
+
+// Normally the library uses direct register access for the DC and CS lines for speed
+// If D0 (GPIO16) is used for CS or DC then a different slower method must be used
+// Uncomment one line is D0 is used for DC or CS
+// DC on D0 = 6% performance penalty at 40MHz SPI running graphics test
+// CS on D0 = 2% performance penalty at 40MHz SPI running graphics test
+
+// #define D0_USED_FOR_DC
+// #define D0_USED_FOR_CS
+
+// ##################################################################################
+//
+// Section 3. Define the fonts that are to be used here
 //
 // ##################################################################################
 
 // Comment out the #defines below with // to stop that font being loaded
 // The ESP8366 had plenty of memory so commenting out fonts is not normally necessary
-// If all fonts are loaded the extra FLASH space required is about 17000 bytes...
+// If all fonts are loaded the extra FLASH space required is about 17Kbytes...
 // To save FLASH space only enable the fonts you need!
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
@@ -62,7 +78,7 @@
 
 // ##################################################################################
 //
-// Define the character to be used to detemine the text bounding box for datum changes
+// Section 4. Define the character to be used to detemine the text bounding box for datum changes
 //
 // ##################################################################################
 
@@ -72,12 +88,15 @@
 
 // ##################################################################################
 //
-// Other options
+// Section 5. Other options
 //
 // ##################################################################################
 
 // Define the SPI clock frequency (40MHz works OK) 80MHz sometimes fails
 
+// #define SPI_FREQUENCY   1000000
+// #define SPI_FREQUENCY   5000000
+// #define SPI_FREQUENCY  10000000 
 // #define SPI_FREQUENCY  20000000
  #define SPI_FREQUENCY  40000000 // Maximum to use SPIFFS
 // #define SPI_FREQUENCY  80000000

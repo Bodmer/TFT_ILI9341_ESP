@@ -149,6 +149,122 @@ void TFT_ILI9341_ESP::writedata(uint8_t c)
 }
 
 /***************************************************************************************
+** Function name:           read pixel (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read 565 pixel colours from a pixel
+***************************************************************************************/
+uint16_t TFT_ILI9341_ESP::readPixel(int32_t x0, int32_t y0)
+{
+	spi_begin();
+
+    setAddrWindow(x0, y0, x0, y0); // Sets CS low, don't care it sent RAMWR
+
+	DC_C;
+    _SPI->transfer(ILI9341_RAMRD); // Read CGRAM command
+	DC_D;
+
+    // Dummy read to throw away don't care value
+    _SPI->transfer(0);
+	
+	// Read window pixel 24 bit RGB values
+    uint8_t r = _SPI->transfer(0);
+    uint8_t g = _SPI->transfer(0);
+    uint8_t b = _SPI->transfer(0);
+
+    CS_H;
+
+	spi_end();
+	
+	return color565(r, g, b);
+}
+
+/***************************************************************************************
+** Function name:           read rectangle (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read 565 pixel colours from a defined area
+***************************************************************************************/
+  void  TFT_ILI9341_ESP::readRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data)
+{
+	spi_begin();
+
+    setAddrWindow(x0, y0, x0 + w - 1, y0 + h - 1); // Sets CS low, don't care it sent RAMWR
+
+	DC_C;
+    _SPI->transfer(ILI9341_RAMRD); // Read CGRAM command
+	DC_D;
+
+    // Dummy read to throw away don't care value
+    _SPI->transfer(0);
+	
+	// Read window pixel 24 bit RGB values
+	uint32_t len = w * h;
+    while (len--) {
+        uint8_t r = _SPI->transfer(0);
+        uint8_t g = _SPI->transfer(0);
+        uint8_t b = _SPI->transfer(0);
+		// Swapped colour byte order for compatibility with pushRect()
+		*data++ = (r & 0xF8) | (g & 0xE0) >> 5 | (b & 0xF8) << 5 | (g & 0x1C) << 11;
+		yield();
+    }
+
+	// Write NOP command to stop read mode
+	//DC_C;
+    //_SPI->transfer(ILI9341_NOP);
+	//DC_D;
+
+    CS_H;
+
+	spi_end();
+}
+
+/***************************************************************************************
+** Function name:           push rectangle (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             push 565 pixel colours into a defined area
+***************************************************************************************/
+  void  TFT_ILI9341_ESP::pushRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data)
+{
+	spi_begin();
+
+    setAddrWindow(x0, y0, x0 + w - 1, y0 + h - 1); // Sets CS low and sent RAMWR
+
+	uint32_t len = w * h * 2;
+	// Push pixels into window rectangle, data is a 16 bit pointer thus increment is halved
+	while ( len >=32 ) {_SPI->writeBytes((uint8_t*)data, 32); data += 16; len -= 32; }
+    if (len) _SPI->writeBytes((uint8_t*)data, len);
+    
+	CS_H;
+
+	spi_end();
+}
+
+/***************************************************************************************
+** Function name:           read rectangle (for SPI Interface II i.e. IM [3:0] = "1101")
+** Description:             Read RGB pixel colours from a defined area
+***************************************************************************************/
+  void  TFT_ILI9341_ESP::readRectRGB(int32_t x0, int32_t y0, int32_t w, int32_t h, uint8_t *data)
+{
+	spi_begin();
+
+    setAddrWindow(x0, y0, x0 + w - 1, y0 + h - 1); // Sets CS low,, don't care it sent RAMWR
+
+	DC_C;
+    _SPI->transfer(ILI9341_RAMRD); // Read CGRAM command
+	DC_D;
+
+    // Dummy read to throw away don't care value
+    _SPI->transfer(0);
+	
+	// Read window pixel 24 bit RGB values, buffer must be set in sketch to 3 * w * h
+	uint32_t len = w * h;
+    while (len--) {
+        *data++ = _SPI->transfer(0);
+        *data++ = _SPI->transfer(0);
+        *data++ = _SPI->transfer(0);
+    }
+    CS_H;
+
+	spi_end();
+}
+
+/***************************************************************************************
 ** Function name:           readcommand8 (for SPI Interface II i.e. IM [3:0] = "1101")
 ** Description:             Read a 8 bit data value from an indexed command register
 ***************************************************************************************/
