@@ -1551,6 +1551,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
     while(SPI1CMD & SPIBUSY) {}
 
     // Send same x value again
+	SPI1W0 = (x >> 8) | (x << 8);
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
@@ -1576,6 +1577,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
     while(SPI1CMD & SPIBUSY) {}
 
     // Send same y value again
+	SPI1W0 = (y >> 8) | (y << 8);
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
