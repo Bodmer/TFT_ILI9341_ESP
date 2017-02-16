@@ -67,7 +67,7 @@
 
 #define USE_FAST_PINIO
 
-#if defined (ESP8266) && defined (D0_USED_FOR_DC)
+#if defined (ESP32) || defined (D0_USED_FOR_DC)
   #define DC_C digitalWrite(TFT_DC, LOW)
   #define DC_D digitalWrite(TFT_DC, HIGH)
 #else
@@ -75,7 +75,7 @@
   #define DC_D GPOS = dcpinmask
 #endif
 
-#if defined (ESP8266) && defined (D0_USED_FOR_CS)
+#if defined (ESP32) || defined (D0_USED_FOR_CS)
   #define CS_L digitalWrite(TFT_CS, LOW)
   #define CS_H digitalWrite(TFT_CS, HIGH)
 #else
