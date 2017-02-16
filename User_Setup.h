@@ -50,7 +50,7 @@
 
 // Normally the library uses direct register access for the DC and CS lines for speed
 // If D0 (GPIO16) is used for CS or DC then a different slower method must be used
-// Uncomment one line is D0 is used for DC or CS
+// Uncomment one line if D0 is used for DC or CS
 // DC on D0 = 6% performance penalty at 40MHz SPI running graphics test
 // CS on D0 = 2% performance penalty at 40MHz SPI running graphics test
 
