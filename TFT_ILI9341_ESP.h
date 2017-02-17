@@ -434,14 +434,15 @@ class TFT_ILI9341_ESP : public Print {
   uint16_t readcommand16(uint8_t cmd_function, uint8_t index);
   uint32_t readcommand32(uint8_t cmd_function, uint8_t index);
 
-  uint16_t readPixel(int32_t x0, int32_t y0); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY - WORD ALIGNMENT ISSUE?
+  uint16_t readPixel(int32_t x0, int32_t y0);
 
-           // These are can be used as a pair to duplicate or move blocks/lines, sometime they work, othertimes the TFT gets into an odd mode   
-  void     readRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
-  void     pushRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
+           // These are can be used as a pair to copy screen blocks or horizontal/vertical lines to another location
+  void     readRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data);
+  void     pushRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data);
 
-			// This next function has been used successfully to dump the TFT screen to a PC for documentation purposes
-  void     readRectRGB(int32_t x0, int32_t y0, int32_t w, int32_t h, uint8_t *data); // DO NOT USE: CAUSES ODD PROBLEMS - BUG IN SPI LIBRARY?
+		   // This next function has been used successfully to dump the TFT screen to a PC for documentation purposes
+		   // Set w and h to 1 to read 1 pixel. The data buffer must be at least w * h * 3 pixels
+  void     readRectRGB(int32_t x0, int32_t y0, int32_t w, int32_t h, uint8_t *data);
 
   uint8_t  getRotation(void);
 

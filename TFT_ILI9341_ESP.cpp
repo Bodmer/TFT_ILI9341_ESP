@@ -425,7 +425,7 @@ void TFT_ILI9341_ESP::init(void)
 
   writecommand(ILI9341_FRMCTR1);
   writedata(0x00);
-  writedata(0x18);
+  writedata(0x13); // 0x18 79Hz, 0x1B default 70Hz, 0x13 100Hz
 
   writecommand(ILI9341_DFUNCTR);    // Display Function Control
   writedata(0x08);
