@@ -75,12 +75,14 @@
   #define DC_D GPOS = dcpinmask
 #endif
 
-#if defined (ESP32) || defined (D0_USED_FOR_CS)
-  #define CS_L digitalWrite(TFT_CS, LOW)
-  #define CS_H digitalWrite(TFT_CS, HIGH)
-#else
-  #define CS_L GPOC = cspinmask
-  #define CS_H GPOS = cspinmask
+#ifndef NO_PIN_USED_FOR_CS
+  #if defined (ESP32) || defined (D0_USED_FOR_CS)
+    #define CS_L digitalWrite(TFT_CS, LOW)
+    #define CS_H digitalWrite(TFT_CS, HIGH)
+  #else
+    #define CS_L GPOC = cspinmask
+    #define CS_H GPOS = cspinmask
+  #endif
 #endif
 
 // We can include all the free fonts and they will only be built into
@@ -434,14 +436,18 @@ class TFT_ILI9341_ESP : public Print {
   uint16_t readcommand16(uint8_t cmd_function, uint8_t index);
   uint32_t readcommand32(uint8_t cmd_function, uint8_t index);
 
+           // Read the colour of a pixel at x,y and return value in 565 format 
   uint16_t readPixel(int32_t x0, int32_t y0);
 
-           // These are can be used as a pair to copy screen blocks or horizontal/vertical lines to another location
+           // The next functions can be used as a pair to copy screen blocks (or horizontal/vertical lines) to another location
+		   // Read a block of pixels to a data buffer, buffer is 16 bit and the array size must be at least w * h
   void     readRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data);
+		   // Write a block of pixels to the screen
   void     pushRect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t *data);
 
 		   // This next function has been used successfully to dump the TFT screen to a PC for documentation purposes
-		   // Set w and h to 1 to read 1 pixel. The data buffer must be at least w * h * 3 pixels
+		   // It reads a screen area and returns the RGB 8 bit colour values of each pixel
+		   // Set w and h to 1 to read 1 pixel's colour. The data buffer must be at least w * h * 3 bytes
   void     readRectRGB(int32_t x0, int32_t y0, int32_t w, int32_t h, uint8_t *data);
 
   uint8_t  getRotation(void);

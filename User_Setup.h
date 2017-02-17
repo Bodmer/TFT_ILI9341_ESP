@@ -21,8 +21,13 @@
 // Display VCC       to NodeMCU 5V or 3.3V
 //
 // The TFT RESET pin can be connected to the NodeMCU RST pin or 3.3V to free up a control pin
+//
 // The TFT CS pin can be connected to GND if no more SPI deivces (e.g. an SD Card) are connected
-// The NodeMCU D0 pin can be used for RST but see  2. below if DC or CS is connected to D0
+// in this case set the pin number to -1 and see Section 2 below for a line to uncomment.
+//
+// The NodeMCU D0 pin can be used for RST
+//
+// See Section 2. below if DC or CS is connected to D0
 //
 // Note: only some versions of the NodeMCU provide the USB 5V on the VIN pin
 // If 5V is not available at a pin you can use 3.3V but backlight brightness
@@ -34,13 +39,13 @@
 #define TFT_CS   D8  // Chip select control pin D8
 #define TFT_DC   D3  // Data Command control pin
 #define TFT_RST  D4  // Reset pin (could connect to NodeMCU RST, see next line)
-//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to NodeMCU RST or 3.3V
+//#define TFT_RST  -1  // Set TFT_RST to -1 if the display RESET is connected to NodeMCU RST or 3.3V
 
 // ESP32 Dev board (planned, not supported yet)
 //#define TFT_CS   5  // Chip select control pin
 //#define TFT_DC   2  // Data Command control pin
 //#define TFT_RST  4  // Reset pin (could connect to Arduino RESET pin)
-//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to NodeMCU RST
+//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
 
 // ##################################################################################
 //
@@ -53,9 +58,11 @@
 // Uncomment one line if D0 is used for DC or CS
 // DC on D0 = 6% performance penalty at 40MHz SPI running graphics test
 // CS on D0 = 2% performance penalty at 40MHz SPI running graphics test
+// If CS is tied low that uncomment NO_PIN_USED_FOR_CS define below
 
 // #define D0_USED_FOR_DC
 // #define D0_USED_FOR_CS
+// #define NO_PIN_USED_FOR_CS
 
 // ##################################################################################
 //
