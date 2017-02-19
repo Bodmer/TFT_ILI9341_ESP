@@ -83,6 +83,9 @@
     #define CS_L GPOC = cspinmask
     #define CS_H GPOS = cspinmask
   #endif
+#else
+	#define CS_L
+    #define CS_H
 #endif
 
 // We can include all the free fonts and they will only be built into

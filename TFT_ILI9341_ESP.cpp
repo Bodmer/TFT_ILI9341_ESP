@@ -648,7 +648,7 @@ void TFT_ILI9341_ESP::fillCircle(int32_t x0, int32_t y0, int32_t r, uint32_t col
 
 
 /*
-// Another algorithm, this one teds to produce less pretty circles with odd edge pixels
+// Another algorithm, this one tends to produce less pretty circles with odd edge pixels
 void TFT_ILI9341_ESP::fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color)
 {
   for (int y1 = -r; y1 <= 0; y1++)
@@ -715,6 +715,8 @@ void TFT_ILI9341_ESP::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry
 
   for (x = 0, y = ry, s = 2*ry2+rx2*(1-2*ry); ry2*x <= rx2*y; x++)
   {
+	// These are ordered to minimise coordinate changes in x or y
+    // drawPixel can then send fewer bounding box commands
     drawPixel(x0 + x, y0 + y, color);
     drawPixel(x0 - x, y0 + y, color);
     drawPixel(x0 - x, y0 - y, color);
@@ -729,6 +731,8 @@ void TFT_ILI9341_ESP::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry
 
   for (x = rx, y = 0, s = 2*rx2+ry2*(1-2*rx); rx2*y <= ry2*x; y++)
   {
+	// These are ordered to minimise coordinate changes in x or y
+    // drawPixel can then send fewer bounding box commands
     drawPixel(x0 + x, y0 + y, color);
     drawPixel(x0 - x, y0 + y, color);
     drawPixel(x0 - x, y0 - y, color);
@@ -1421,9 +1425,10 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
   DC_C;
   CS_L;
 
-  const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+  uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+  mask = SPI1U1 & mask;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+  SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
 
   SPI1W0 = ILI9341_CASET;
   SPI1CMD |= SPIBUSY;
@@ -1431,20 +1436,31 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
 
   DC_D;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
-
-  SPI1W0 = (x0 >> 8) | (x0 << 8);
+  SPI1U1 = mask | (31 << SPILMOSI) | (31 << SPILMISO);
+  // Load the two coords as a 32 bit value and shift in one go
+  SPI1W0 = (x0 >> 8) | (uint16_t)(x0 << 8) | ((uint8_t)(x1 >> 8)<<16 | (x1 << 24));
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
-  SPI1W0 = (x1 >> 8) | (x1 << 8);
-  SPI1CMD |= SPIBUSY;
-  while(SPI1CMD & SPIBUSY) {}
+  // This proves we can only change the byte level bit SPI register read-out order, not the actual byte order
+  // So we can't use this method to avoid coordinate byte order swapping! 
+  //uint32_t x = (x0 << 16) | x1;
+  // Swap bits in 32 bit word end for end
+  //x = (((x & 0xAAAAAAAA) >> 1) | ((x & 0x55555555) << 1));
+  //x = (((x & 0xCCCCCCCC) >> 2) | ((x & 0x33333333) << 2));
+  //x = (((x & 0xF0F0F0F0) >> 4) | ((x & 0x0F0F0F0F) << 4));
+  //x = (((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8));
+  //x = (x >> 16) | (x << 16);
+  //SPI1W0 = x;
+  //SPI1C |= (SPICWBO | SPICRBO);  // LSB first
+  //SPI1CMD |= SPIBUSY;
+  //while(SPI1CMD & SPIBUSY) {}
+  //SPI1C &= ~(SPICWBO | SPICRBO); // MSB first = default
 
   // Row addr set
   DC_C;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+  SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
 
   SPI1W0 = ILI9341_PASET;
   SPI1CMD |= SPIBUSY;
@@ -1452,19 +1468,16 @@ inline void TFT_ILI9341_ESP::setAddrWindow(int32_t x0, int32_t y0, int32_t x1, i
 
   DC_D;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
-
-  SPI1W0 = (y0 >> 8) | (y0 << 8);
-  SPI1CMD |= SPIBUSY;
-  while(SPI1CMD & SPIBUSY) {}
-
-  SPI1W0 = (y1 >> 8) | (y1 << 8);
+  SPI1U1 = mask | (31 << SPILMOSI) | (31 << SPILMISO);
+  // Load the two coords as a 32 bit value and shift in one go
+  SPI1W0 = (y0 >> 8) | (uint16_t)(y0 << 8) | ((uint8_t)(y1 >> 8)<<16 | (y1 << 24));
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
 
   // write to RAM
   DC_C;
-  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+
+  SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
   SPI1W0 = ILI9341_RAMWR;
   SPI1CMD |= SPIBUSY;
   while(SPI1CMD & SPIBUSY) {}
@@ -1530,28 +1543,24 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 
   CS_L;
 
-  const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
-
+  uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+  mask = SPI1U1 & mask;
   // No need to send x if it has not changed (speeds things up)
   if (addr_col != x) {
 
     DC_C;
 
-    SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+    SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
     SPI1W0 = ILI9341_CASET;
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
     DC_D;
 
-    SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
-
-    SPI1W0 = (x >> 8) | (x << 8);
-    SPI1CMD |= SPIBUSY;
-    while(SPI1CMD & SPIBUSY) {}
-
-    // Send same x value again
-	SPI1W0 = (x >> 8) | (x << 8);
+    SPI1U1 = mask | (31 << SPILMOSI) | (31 << SPILMISO);
+    // Load the two coords as a 32 bit value and shift in one go
+	uint32_t xswap = (x >> 8) | (uint16_t)(x << 8);
+    SPI1W0 = xswap | (xswap << 16);
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
@@ -1563,21 +1572,17 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 
     DC_C;
 
-    SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+    SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
 
     SPI1W0 = ILI9341_PASET;
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
     DC_D;
 
-    SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
-
-    SPI1W0 = (y >> 8) | (y << 8);
-    SPI1CMD |= SPIBUSY;
-    while(SPI1CMD & SPIBUSY) {}
-
-    // Send same y value again
-	SPI1W0 = (y >> 8) | (y << 8);
+    SPI1U1 = mask | (31 << SPILMOSI) | (31 << SPILMISO);
+    // Load the two coords as a 32 bit value and shift in one go
+	uint32_t yswap = (y >> 8) | (uint16_t)(y << 8);
+    SPI1W0 = yswap | (yswap << 16);
     SPI1CMD |= SPIBUSY;
     while(SPI1CMD & SPIBUSY) {}
 
@@ -1586,7 +1591,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 
   DC_C;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((7 << SPILMOSI) | (7 << SPILMISO)));
+  SPI1U1 = mask | (7 << SPILMOSI) | (7 << SPILMISO);
 
   SPI1W0 = ILI9341_RAMWR;
   SPI1CMD |= SPIBUSY;
@@ -1594,7 +1599,7 @@ void TFT_ILI9341_ESP::drawPixel(uint32_t x, uint32_t y, uint32_t color)
 
   DC_D;
 
-  SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+  SPI1U1 = mask | (15 << SPILMOSI) | (15 << SPILMISO);
 
   SPI1W0 = (color >> 8) | (color << 8);
   SPI1CMD |= SPIBUSY;
@@ -1828,7 +1833,8 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 	int16_t err = dx / 2;
 	int8_t ystep = (y0 < y1) ? 1 : (-1);
 
-    const uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+    uint32_t mask = ~((SPIMMOSI << SPILMOSI) | (SPIMMISO << SPILMISO));
+    mask = (SPI1U1 & mask) | (15 << SPILMOSI) | (15 << SPILMISO);
 
     int16_t swapped_color = (color >> 8) | (color << 8);
 
@@ -1848,11 +1854,11 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 	  if (x0 > x1) return;
 
            setAddrWindow(y0, x0, y0, _height);
-           SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+           SPI1U1 = mask;
 		for (; x0 <= x1; x0++) {
-                while(SPI1CMD & SPIBUSY) {}
-                SPI1W0 = swapped_color;
-                SPI1CMD |= SPIBUSY;
+            while(SPI1CMD & SPIBUSY) {}
+            SPI1W0 = swapped_color;
+            SPI1CMD |= SPIBUSY;
 
 			err -= dy;
 			if (err < 0) {
@@ -1861,7 +1867,7 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 				err += dx;
 				while(SPI1CMD & SPIBUSY) {}
 				setAddrWindow(y0, x0+1, y0, _height);
-				SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+				SPI1U1 = mask;
 			}
 		}
 	}
@@ -1881,7 +1887,7 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 	  if (x0 > x1) return;
 
            setAddrWindow(x0, y0, _width, y0);
-           SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+           SPI1U1 = mask;
 
 		for (; x0 <= x1; x0++) {
 			while(SPI1CMD & SPIBUSY) {}
@@ -1895,7 +1901,7 @@ void TFT_ILI9341_ESP::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, u
 				err += dx;
 				while(SPI1CMD & SPIBUSY) {}
                      setAddrWindow(x0+1, y0, _width, y0);
-				SPI1U1 = ((SPI1U1 & mask) | ((15 << SPILMOSI) | (15 << SPILMISO)));
+				SPI1U1 = mask;
 			}
 		}
 	}
