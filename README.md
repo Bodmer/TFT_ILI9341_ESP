@@ -1,3 +1,11 @@
+# Update
+This library has now been superceded by this one:
+https://github.com/Bodmer/TFT_eSPI
+
+The new library supports the common ST7735 and ILI9341 displays. Furhter display drivers will be added.
+
+The TFT_ILI9341_ESP library will not longer be developed further and remains here for legacy support only.
+
 # TFT_ILI9341_ESP
 
 An Arduino IDE compatible graphics and fonts library for ESP8266 processors with a driver for the ILI9341 based TFT displays.
