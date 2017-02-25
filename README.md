@@ -2,9 +2,9 @@
 This library has now been superceded by this one:
 https://github.com/Bodmer/TFT_eSPI
 
-The new library supports the common ST7735 and ILI9341 displays. Furhter display drivers will be added.
+The new library supports the common ST7735 and ILI9341 displays. Additional display drivers will be added at a future date.
 
-The TFT_ILI9341_ESP library will not longer be developed further and remains here for legacy support only.
+The TFT_ILI9341_ESP library will no longer be developed further, it remains here for legacy support only.
 
 # TFT_ILI9341_ESP
 
